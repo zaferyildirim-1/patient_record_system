@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.clinic.backup.weekly</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/zaferyildirim/.nvm/versions/node/v25.4.0/bin/node</string>
+        <string>/Users/zaferyildirim/Desktop/huseyin_sert/scripts/export-csv.js</string>
+        <string>weekly</string>
+    </array>
+    
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>BACKUP_SCHEDULE</key>
+        <string>weekly</string>
+    </dict>
+    
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key>
+        <integer>0</integer>
+        <key>Hour</key>
+        <integer>23</integer>
+        <key>Minute</key>
+        <integer>30</integer>
+    </dict>
+    
+    <key>StandardOutPath</key>
+    <string>/Users/zaferyildirim/Desktop/huseyin_sert/logs/backup-weekly.log</string>
+    
+    <key>StandardErrorPath</key>
+    <string>/Users/zaferyildirim/Desktop/huseyin_sert/logs/backup-weekly-error.log</string>
+    
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>

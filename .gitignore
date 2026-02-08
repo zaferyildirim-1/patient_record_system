@@ -1,0 +1,33 @@
+# Environment variables (SENSITIVE - never commit!)
+.env
+
+# Database (contains patient data)
+clinic.db
+clinic.db-journal
+
+# Session storage (contains user sessions)
+.sessions/
+
+# CSV Backups (contains patient data)
+backups/
+
+# Node modules
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build outputs
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

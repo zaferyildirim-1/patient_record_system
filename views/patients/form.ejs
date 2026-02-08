@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <%- include('../partials/topbar') %>
+  <header>
+    <h1><%= title %></h1>
+    <p>Temel hasta bilgilerini düzenleyin</p>
+  </header>
+  <main>
+    <div class="toolbar">
+      <a class="button secondary" href="/">Ana Sayfa</a>
+      <a class="button secondary" href="/patients">Listeye Dön</a>
+    </div>
+
+    <% if (errors.length) { %>
+      <div class="alert">
+        Lütfen zorunlu alanları doldurun: <%= errors.join(', ') %>
+      </div>
+    <% } %>
+
+    <% if (patient && patient.patient_code) { %>
+      <div class="info-badge">
+        Bu hasta için kod: <span><%= patient.patient_code %></span>
+      </div>
+    <% } %>
+
+    <form action="<%= action %>" method="<%= method %>">
+      <div>
+        <label for="full_name">Ad Soyad *</label>
+        <input type="text" id="full_name" name="full_name" value="<%= patient?.full_name || '' %>" required>
+      </div>
+
+      <div>
+        <label for="age">Yaş *</label>
+        <input type="number" id="age" name="age" value="<%= patient?.age || '' %>" min="0" required>
+      </div>
+
+      <div>
+        <label for="birth_date">Doğum Tarihi</label>
+        <input type="date" id="birth_date" name="birth_date" value="<%= patient?.birth_date || '' %>" lang="tr-TR">
+      </div>
+
+      <div>
+        <label for="phone_number">Cep Numarası</label>
+        <input type="tel" id="phone_number" name="phone_number" value="<%= patient?.phone_number || '' %>" placeholder="Telefon numarası">
+      </div>
+
+      <button type="submit">Kaydet</button>
+    </form>
+  </main>

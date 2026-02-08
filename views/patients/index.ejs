@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Hasta Listesi</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <%- include('../partials/topbar') %>
+  <header>
+    <h1>Hasta Kayıt Listesi</h1>
+    <p>Kayıtlı hastalar ve muayene özetleri</p>
+  </header>
+  <main>
+    <div class="toolbar">
+      <a class="button secondary" href="/">Ana Sayfa</a>
+      <a class="button" href="/patients/new">Yeni Hasta Ekle</a>
+    </div>
+    <form class="patient-filter" method="GET" action="/patients">
+      <table class="patient-table">
+        <thead>
+          <tr>
+            <th>Hasta Kodu</th>
+            <th>Ad Soyad</th>
+            <th>Yaş</th>
+            <th>Doğum Tarihi</th>
+            <th>Son Ziyaret</th>
+            <th>Kayıt Tarihi</th>
+            <th>Muayene Sayısı</th>
+            <th>İşlemler</th>
+          </tr>
+          <tr class="filter-row">
+            <th class="filter-cell">
+              <div class="filter-field">
+                <input type="search" name="patient_code" value="<%= (filters && filters.patient_code) || '' %>" placeholder="Hasta kodu ara" aria-label="Hasta kodunda ara">
+                <button type="submit" class="filter-button" title="Hasta kodunda ara">Ara</button>
+              </div>
+            </th>
+            <th class="filter-cell">
+              <div class="filter-field">
+                <input type="search" name="full_name" value="<%= (filters && filters.full_name) || '' %>" placeholder="Ad soyad ara" aria-label="Ad soyadda ara">
+                <button type="submit" class="filter-button" title="Ad soyadda ara">Ara</button>
+              </div>
+            </th>
+            <th class="filter-cell"></th>
+            <th class="filter-cell"></th>
+            <th class="filter-cell"></th>
+            <th class="filter-cell"></th>
+            <th class="filter-cell"></th>
+            <th class="filter-cell">
+              <% if (hasFilters) { %>
+                <a class="filter-clear" href="/patients">Temizle</a>
+              <% } %>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (patients.length) { %>
+            <% patients.forEach((patient) => { %>
+              <tr>
+                <td class="col-code"><%= patient.patient_code %></td>
+                <td class="col-name"><%= patient.full_name %></td>
+                <td class="col-age"><%= patient.age %></td>
+                <td class="col-date"><%= formatDate(patient.birth_date) %></td>
+                <td class="col-date"><%= patient.last_visit ? formatDate(patient.last_visit) : 'Kayıt yok' %></td>
+                <td class="col-date"><%= formatDate(patient.created_at ? patient.created_at.split(' ')[0] : null) %></td>
+                <td class="col-count"><%= patient.record_count %></td>
+                <td class="col-actions">
+                  <a class="button secondary" href="/patients/<%= patient.id %>">Detay</a>
+                  <a class="button" href="/patients/<%= patient.id %>/edit">Düzenle</a>
+
+                </td>
+              </tr>
+            <% }); %>
+          <% } else { %>
+            <tr>
+              <td class="empty-state" colspan="8">
+                <% if (hasFilters) { %>
+                  <span>Aramaya uygun hasta bulunamadı.</span>
+                  <a class="filter-clear" href="/patients">Filtreleri temizle</a>
+                <% } else { %>
+                  <span>Henüz hasta kaydı yok.</span>
+                <% } %>
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </form>
+  </main>
+</body>
+</html>

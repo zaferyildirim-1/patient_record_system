@@ -1,0 +1,17 @@
+<nav class="topbar">
+  <div class="topbar-left">
+    <a class="topbar-brand" href="/">Hasta Kayıt Sistemi</a>
+    <a class="topbar-link" href="/">Ana Sayfa</a>
+    <a class="topbar-link" href="/patients">Hasta Listesi</a>
+    <a class="topbar-link" href="/patients/new">Yeni Hasta</a>
+  </div>
+  <div class="topbar-right">
+    <% if (currentUser) { %>
+      <span class="topbar-user">👤 <%= currentUser.username %></span>
+      <a class="topbar-link" href="/change-password">🔒 Şifre Değiştir</a>
+      <form class="logout-form" action="/logout" method="POST">
+        <button type="submit" class="button tertiary">Çıkış</button>
+      </form>
+    <% } %>
+  </div>
+</nav>

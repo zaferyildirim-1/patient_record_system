@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Hasta Kayıt Sistemi</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="dashboard">
+  <%- include('partials/topbar') %>
+  <% 
+    const fallbackNow = new Date();
+    const day = String(fallbackNow.getDate()).padStart(2, '0');
+    const month = String(fallbackNow.getMonth() + 1).padStart(2, '0');
+    const year = fallbackNow.getFullYear();
+    const weekday = fallbackNow.toLocaleDateString('tr-TR', { weekday: 'long' });
+    const weekdayCapitalized = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+    const heroMoment = (typeof currentMoment === 'string' && currentMoment.trim())
+      ? currentMoment
+      : `${day}.${month}.${year} ${weekdayCapitalized}`;
+  %>
+  <header class="hero">
+      <div class="hero-content">
+        <h1>Op Dr. Hüseyin Sert</h1>
+        <p class="hero-subtitle">Kadın Sağlığı Kliniği</p>
+      <div class="hero-actions">
+        <a class="button" href="/patients/new">Yeni Hasta Ekle</a>
+        <a class="button secondary" href="/patients">Hasta Listesi</a>
+      </div>
+    </div>
+      <div class="hero-metrics">
+      <div class="hero-card">
+        <div class="analog-clock">
+          <div class="clock-face">
+            <div class="hand hour-hand"></div>
+            <div class="hand minute-hand"></div>
+            <div class="hand second-hand"></div>
+            <div class="center-dot"></div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-card">
+        <span class="hero-value hero-date"><%= heroMoment %></span>
+      </div>
+    </div>
+  </header>
+  <script>
+    function updateClock() {
+      const now = new Date();
+      const seconds = now.getSeconds();
+      const minutes = now.getMinutes();
+      const hours = now.getHours() % 12;
+      const secondDeg = (seconds / 60) * 360;
+      const minuteDeg = (minutes / 60) * 360 + (seconds / 60) * 6;
+      const hourDeg = (hours / 12) * 360 + (minutes / 60) * 30;
+      document.querySelector('.second-hand').style.transform = `rotate(${secondDeg}deg)`;
+      document.querySelector('.minute-hand').style.transform = `rotate(${minuteDeg}deg)`;
+      document.querySelector('.hour-hand').style.transform = `rotate(${hourDeg}deg)`;
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+  </script>
+  <main>
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>Bugün Gelen Hastalar</h2>
+        </div>
+        <span class="badge"><%= todayPatients.length %></span>
+      </div>
+      <% if (!todayPatients.length) { %>
+        <p>Bugün için kayıtlı hasta yok.</p>
+      <% } else { %>
+        <table class="dashboard-table">
+          <thead>
+            <tr>
+              <th>Hasta Kodu</th>
+              <th>Ad Soyad</th>
+              <th>Yaş</th>
+              <th>Bir Önceki Ziyaret</th>
+              <th>İşlemler</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% todayPatients.forEach((patient) => { %>
+              <tr>
+                <td><%= patient.patient_code %></td>
+                <td><%= patient.full_name %></td>
+                <td><%= patient.age %></td>
+                <td><%= patient.previous_visit ? formatDate(patient.previous_visit) : 'İlk Ziyaret' %></td>
+                <td class="panel-actions">
+                  <a class="button secondary" href="/patients/<%= patient.id %>">Detay</a>
+                  <a class="button" href="/patients/<%= patient.id %>/edit">Düzenle</a>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      <% } %>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Kayıt Özeti</h2>
+      </div>
+      <ul class="summary-list">
+        <li><span class="dot neutral"></span> Toplam hasta: <strong><%= stats.totalPatients %></strong></li>
+        <li><span class="dot success"></span> Bugün gelen hastalar: <strong><%= stats.todayPatients %></strong></li>
+        <li><span class="dot info"></span> Son 7 günde muayene: <strong><%= stats.weekRecords %></strong></li>
+        <% if (stats.latestPatient) { %>
+          <li><span class="dot neutral"></span> En son eklenen hasta: <strong><%= stats.latestPatient.full_name %></strong> (<%= stats.latestPatient.patient_code %>) - <%= new Date(stats.latestPatient.created_at).toLocaleDateString('tr-TR') %></li>
+        <% } %>
+        <li><span class="dot warning"></span> Toplam muayene kaydı: <strong><%= stats.totalRecords %></strong></li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

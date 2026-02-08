@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Muayene Kaydını Düzenle</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <%- include('../partials/topbar') %>
+  <header>
+    <h1>Muayene Kaydını Düzenle</h1>
+    <p><%= patient.full_name %> (<%= patient.patient_code %>)</p>
+  </header>
+  <main>
+    <div class="toolbar">
+      <a class="button secondary" href="/">Ana Sayfa</a>
+      <a class="button secondary" href="/patients">Hasta Listesi</a>
+      <a class="button secondary" href="/patients/<%= patient.id %>">Hasta Detay</a>
+    </div>
+
+    <% if (errors.length) { %>
+      <div class="alert">
+        <%= errors.join(', ') %>
+      </div>
+    <% } %>
+
+    <form action="/patients/<%= patient.id %>/records/<%= record.id %>/update" method="POST">
+      <div>
+        <label for="visit_date">Muayene Tarihi *</label>
+        <input type="date" id="visit_date" name="visit_date" value="<%= record.visit_date %>" required lang="tr-TR">
+      </div>
+
+      <div>
+        <label for="visit_type">Muayene Türü</label>
+        <input type="text" id="visit_type" name="visit_type" value="<%= record.visit_type || '' %>">
+      </div>
+
+      <div class="form-grid">
+        <div>
+          <label for="last_menstrual_date">SAT (Son Adet Tarihi)</label>
+          <input type="date" id="last_menstrual_date" name="last_menstrual_date" value="<%= record.last_menstrual_date || '' %>" lang="tr-TR">
+        </div>
+        <div>
+          <label for="menstrual_day">Adetin Kaçıncı Günü</label>
+          <input type="text" id="menstrual_day" name="menstrual_day" value="<%= record.menstrual_day || '' %>" placeholder="Ör: 3">
+        </div>
+      </div>
+
+      <div>
+        <label for="complaint">Şikayet</label>
+        <textarea id="complaint" name="complaint" rows="4"><%= record.complaint || '' %></textarea>
+      </div>
+
+      <div>
+        <label for="usg">USG</label>
+        <textarea id="usg" name="usg" rows="3"><%= record.usg || '' %></textarea>
+      </div>
+
+      <div>
+        <label for="diagnosis">Teşhis</label>
+        <textarea id="diagnosis" name="diagnosis" rows="4"><%= record.diagnosis || '' %></textarea>
+      </div>
+
+      <div>
+        <label for="outcome">Sonuç - Tedavi - Reçete</label>
+        <textarea id="outcome" name="outcome" rows="4"><%= record.outcome || '' %></textarea>
+      </div>
+
+      <button type="submit">Güncelle</button>
+      <a class="button secondary" href="/patients/<%= patient.id %>">İptal</a>
+    </form>
+  </main>
+</body>
+</html>

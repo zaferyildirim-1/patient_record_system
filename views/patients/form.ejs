@@ -47,15 +47,9 @@
         </div>
       </div>
 
-      <div class="form-grid">
-        <div>
-          <label for="phone_number">Cep Numarası</label>
-          <input type="tel" id="phone_number" name="phone_number" value="<%= patient?.phone_number || '' %>" placeholder="+90 XXX XXX XXXX">
-        </div>
-        <div>
-          <label for="email">E-mail</label>
-          <input type="email" id="email" name="email" value="<%= patient?.email || '' %>" placeholder="hasta@example.com">
-        </div>
+      <div>
+        <label for="phone_number">Cep Numarası</label>
+        <input type="tel" id="phone_number" name="phone_number" value="<%= patient?.phone_number || '' %>" placeholder="+90 XXX XXX XXXX">
       </div>
 
       <div>
@@ -64,34 +58,6 @@
       </div>
 
       <h3>Sağlık Bilgileri</h3>
-      <div class="form-grid">
-        <div>
-          <label for="blood_type">Kan Grubu</label>
-          <select id="blood_type" name="blood_type">
-            <option value="">-- Seçiniz --</option>
-            <option value="A" <%= patient?.blood_type === 'A' ? 'selected' : '' %>>A</option>
-            <option value="B" <%= patient?.blood_type === 'B' ? 'selected' : '' %>>B</option>
-            <option value="AB" <%= patient?.blood_type === 'AB' ? 'selected' : '' %>>AB</option>
-            <option value="O" <%= patient?.blood_type === 'O' ? 'selected' : '' %>>O</option>
-          </select>
-        </div>
-        <div>
-          <label for="marital_status">Medeni Durum</label>
-          <select id="marital_status" name="marital_status">
-            <option value="">-- Seçiniz --</option>
-            <option value="Evli" <%= patient?.marital_status === 'Evli' ? 'selected' : '' %>>Evli</option>
-            <option value="Bekar" <%= patient?.marital_status === 'Bekar' ? 'selected' : '' %>>Bekar</option>
-            <option value="Boşanmış" <%= patient?.marital_status === 'Boşanmış' ? 'selected' : '' %>>Boşanmış</option>
-            <option value="Dul" <%= patient?.marital_status === 'Dul' ? 'selected' : '' %>>Dul</option>
-          </select>
-        </div>
-      </div>
-
-      <div>
-        <label for="occupation">Meslek</label>
-        <input type="text" id="occupation" name="occupation" value="<%= patient?.occupation || '' %>" placeholder="Mesleği yazınız">
-      </div>
-
       <div>
         <label for="chronic_conditions">Kronik Hastalıklar <small>(her biri yeni satırda)</small></label>
         <textarea id="chronic_conditions" name="chronic_conditions" rows="3" placeholder="Örn: Hipertansiyon&#10;Diyabet&#10;Tiroit hastalığı"><%= patient?.chronic_conditions?.join('\n') || '' %></textarea>

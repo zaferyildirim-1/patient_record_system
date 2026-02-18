@@ -14,13 +14,14 @@ const openai = new OpenAI({
 const PROMPT = `Bu kadın doğum hastası dosyasından bilgileri JSON formatında çıkar.
 
 Kurallar:
-1. Ad Soyad, D.T (doğum tarihi), Telefon numarasını bul
-2. Yaşı doğum tarihinden hesapla (bugün: 2 Şubat 2026)
+1. Ad Soyad, D.T (doğum tarihi), Telefon numarasını zorunlu bul
+2. Yaşı doğum tarihinden hesapla (bugün: 18 Şubat 2026)
 3. Tarihleri YYYY-MM-DD formatına çevir
 4. Her tarih (örn: 07.08.2025) bir muayene kaydıdır
-5. SAT (Son Adet Tarihi) varsa al
-6. "Adetin X. Günü" ifadesinden sayıyı al
-7. USG, Şikayet, Teşhis, Reçete/Tedavi bilgilerini ayır
+5. SAT (Son Adet Tarihi) varsa al, yoksa null
+6. "Adetin X. Günü" ifadesinden sayıyı al, yoksa null
+7. USG, Şikayet, Teşhis, Tedavi/Reçete bilgilerini muayene kayıtlarına ayır
+8. Eğer dosyada kronik hastalıklar, ilaçlar, alerjiler, operasyon geçmişi varsa not et
 
 JSON formatı:
 {
@@ -28,11 +29,16 @@ JSON formatı:
     "full_name": "...",
     "birth_date": "YYYY-MM-DD",
     "age": sayı,
-    "phone_number": "..."
+    "phone_number": "+90 XXX XXX XXXX",
+    "chronic_conditions": ["...", "..."] veya [],
+    "medications": ["...", "..."] veya [],
+    "allergies": ["...", "..."] veya [],
+    "past_surgeries": ["...", "..."] veya []
   },
   "visits": [
     {
       "visit_date": "YYYY-MM-DD",
+      "visit_type": "Rutin Kontrol",
       "last_menstrual_date": "YYYY-MM-DD veya null",
       "menstrual_day": sayı veya null,
       "complaint": "...",
@@ -69,7 +75,11 @@ async function saveToDatabase(data) {
     full_name: data.patient.full_name,
     age: data.patient.age,
     birth_date: data.patient.birth_date,
-    phone_number: data.patient.phone_number
+    phone_number: data.patient.phone_number,
+    chronic_conditions: data.patient.chronic_conditions || [],
+    medications: data.patient.medications || [],
+    allergies: data.patient.allergies || [],
+    past_surgeries: data.patient.past_surgeries || []
   });
 
   console.log(`  💾 Hasta kaydedildi: ${data.patient.full_name}`);
@@ -84,6 +94,7 @@ async function saveToDatabase(data) {
       patient_id: patientId,
       visit_date: visit.visit_date,
       visit_order: count + 1,
+      visit_type: visit.visit_type || 'Kontrol',
       visit_week: `${year}-W${String(weekNumber).padStart(2, '0')}`,
       last_menstrual_date: visit.last_menstrual_date || null,
       menstrual_day: visit.menstrual_day || null,
@@ -127,7 +138,7 @@ async function processDocx(filePath) {
 }
 
 async function main() {
-  console.log('🏥 DOCX Import Aracı (Test)\n');
+  console.log('🏥 DOCX Import Aracı\n');
   console.log('='.repeat(50));
 
   if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'buraya-api-keyini-yaz') {
@@ -135,31 +146,30 @@ async function main() {
     process.exit(1);
   }
 
-  await db.init();
+  await db.initializeDatabase();
   console.log('✅ Veritabanı hazır\n');
 
-  const docxFolder = '/Users/zaferyildirim/Desktop/hasta_docx';
-  const files = fs.readdirSync(docxFolder)
-    .filter(f => f.endsWith('.docx'))
-    .slice(0, 2)
-    .map(f => path.join(docxFolder, f));
-
-  console.log(`🧪 ${files.length} dosya test edilecek:`);
-  files.forEach((f, i) => console.log(`   ${i + 1}. ${path.basename(f)}`));
-  console.log('='.repeat(50));
-
-  const results = [];
-  for (const file of files) {
-    const result = await processDocx(file);
-    results.push(result);
+  // Test dosyası
+  const testFile = '/Users/zaferyildirim/Desktop/Hasta Muayene dosyaları/Havva Didem Çercialioğlu.docx';
+  
+  if (!fs.existsSync(testFile)) {
+    console.error(`❌ Dosya bulunamadı: ${testFile}`);
+    process.exit(1);
   }
 
+  console.log(`🧪 Test dosyası: ${path.basename(testFile)}`);
   console.log('='.repeat(50));
-  console.log('📊 ÖZET\n');
-  const success = results.filter(r => r.success);
-  console.log(`✅ Başarılı: ${success.length}/${results.length}`);
-  if (success.length > 0) {
-    success.forEach(r => console.log(`  • ${r.patient} - ${r.count} kayıt`));
+
+  const result = await processDocx(testFile);
+
+  console.log('='.repeat(50));
+  console.log('📊 SONUÇ\n');
+  if (result.success) {
+    console.log(`✅ Başarılı!`);
+    console.log(`  Hasta: ${result.patient}`);
+    console.log(`  Muayene: ${result.count} kayıt`);
+  } else {
+    console.log(`❌ Hata: ${result.error}`);
   }
   console.log('='.repeat(50));
 }

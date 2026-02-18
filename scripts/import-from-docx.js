@@ -13,6 +13,8 @@ const openai = new OpenAI({
 
 const PROMPT = `KADIN DOĞUM HASTASI DOSYASINI TAM OLARAK JSON'A ÇEVİR. HİÇBİR BİLGİ ATLANMAMALI!
 
+⚠️ KRITIK: Her muayene kaydının hiç bir bilgisini atma - her satır, her bulgu, lab sonuçları, ilaçlar HEPSİ!
+
 === HASTA BİLGİSİ (DOSYA BAŞINDA) ===
 1. Ad Soyad: Zorunlu, tam adı bul
 2. Doğum Tarihi: Bulabiliyor musun? YYYY-MM-DD biçim (bilmiyorsan null)
@@ -24,54 +26,113 @@ const PROMPT = `KADIN DOĞUM HASTASI DOSYASINI TAM OLARAK JSON'A ÇEVİR. HİÇB
 8. Operasyonlar: Belirtilmişse (sezaryen, vs), yoksa []
 
 === MUAYENE KAYITLARı (ZİYARET LİSTESİ) ===
+⚠️ DİKKAT: Her muayenenin TARİHİ yazılı olmayabilir - konteksten çıkar!
+           SAT sadece ilk muayenede olabilir!
+           Muayene bulguları satırını hemen sonrası yazılı olabilir!
+
 HER ZİYARET İÇİN BUNU AL:
 
-1. **Tarih**: "20.01.2025" → "2025-01-20" 
+1. **Tarih** (TÜM SATIR KONTROL ET): 
+   - "20.01.2025" yazılı mı? → "2025-01-20"
+   - Yoksa muayene açıklamasından sonra mı yazılı? Konteksten çıkar
+   - Tarih zorunlu!
+
 2. **Muayene Türü** (visit_type): "Rutin Kontrol", "Sezaryan Sonu Kontrol" vb
-3. **SAT** (Son Adet Tarihi): SADECE İLK MUAYENEDE var mı kontrol et! Sonrakilerde değil
+   - Yazılı değilse "Kontrol" yaz3. **SAT** (Son Adet Tarihi): SADECE İLK MUAYENEDE var mı kontrol et!
+
 4. **Adetin Günü**: "Adetin X. Günü" yazılı mı? Sayıyı çıkar, yoksa null
-5. **Şikayet**: "Eller ve ayaklarda şişlik olmuş" - TÜM şikayeti yaz, kısma 
-6. **USG**: "37 haftalık" veya "30-1/7 haftalık" - TÜM ifadeyi kopyala
-7. **Teşhis**: "FKA +. Baş duruş." - TÜM teşhisi yaz, eksik bırakma
-8. **Sonuç-Tedavi-Reçete**: "İnsizyon yeri temiz, pansuman yapıştı" - TAM YAZDIR
-   - Bu kısımda ilaç, reçete, öneriler, tedavi HEPSI olabilir - HEPSİNİ OUTCOME'a yaz!
+
+5. **Şikayet** (complaint): TÜM ŞIKAYETI - ATMA!
+   - "Ellerde uyuşma ve odem olmuş" - tamamını yaz
+   - "Kesinlikle eksik başı yok" - tamamını yaz
+   - "Bir şikayeti yok" - yine yaz!
+   - Şikayet yoksa "" (empty string)
+
+6. **LAB/KLİNİK BULGULAR** (diagnosis'e yaz!):
+   - "TİT de bakteri uri mevcut" yazılıysa MUTLAKA diagnosis'e yaz!
+   - "Ellerde uyuşma ve odem" yazılıysa YAZ!
+   - Tüm lab results, kultur sonuçları, klinik bulgular → diagnosis'e
+
+7. **USG BULGULARI** (usg alanına): 
+   - "USG: 30-1/7 haftalık" - TÜM İFADEYİ SAY
+   - Sonraki satırda "FKA +. Amnion sıvısı normal..." yazılıysa → TAM YAZDIR
+   - "TA: 1522 gr" yazılıysa → SAY
+   - "Baş duruş", "Makat duruş" → SAY
+   - TÜM STATİSTİK: "Gelişim yüzde 74 persantilde" → SAY!
+
+8. **SONUÇ-TEDavi-REÇETE** (outcome'a): TAM HER ŞEY!
+   - İnsizyon yeri temiz, pansuman → yaz
+   - "Piyeloseptyl, magninore plus verildi" → ILAÇLAR outcome'a!
+   - "Diyet önerildi" → yaz
+   - "Önerilerde bulunuldu" → yaz
+   - TÜM İLAÇLAR, TEDAVILER, ÖNERİLER → outcome'a DAHİL!
+
+=== YAYGOIN PROBLEM VE ÇÖZÜMÜ ===
+PROBLEM: "Ellerde uyuşma ve odem olmuş. TİT de bakteri uri mevcut."
+ÇÖZÜM: İKİ BİLGİ DE AYRı ALANLARA YAZ:
+  - complaint: "Ellerde uyuşma ve odem olmuş"
+  - diagnosis: "TİT de bakteri uri mevcut" (veya her ikiside diagnosis'e)
+
+SOROL: Her satırda birden fazla bilgi var mı?
+CEVAP: Evet → HEPSINI YAZ! Sadece split et alanlar arasında!
 
 === ZİYARETLER SIRALAMASI ===
 - EN ESKİ'DEN EN YENİ'YE (kronolojik sıra)
 - Tarihler artışlı olmalı
 
+=== KONTROL LİSTESİ (hiç atma!) ===
+□ Complaint: Yok mu? "" yaz, var mı tamamını yaz
+□ USG: Hafta sayısı + tüm bulguları yaz (13 haftalık, 30-1/7, FKA +, etc) 
+□ Diagnosis: Lab/klinik bulgularını ekle (TİT, bakteri, kultur vb!)
+□ Outcome: İlaçları ekle (Piyeloseptyl, Magninore, Decavit, Ecoprin vb)
+□ Dates: YYYY-MM-DD format
+□ NO MISSING: "TİT" ve "bakteri uri" HER İKİSİ YAZ!
+
 === JSON ÇIKTISI ===
 {
   "patient": {
-    "full_name": "...",
-    "birth_date": "YYYY-MM-DD veya null",
-    "age": sayı,
-    "phone_number": "+90 ... veya null",
+    "full_name": "Havva Didem Çercialioğlu",
+    "birth_date": "1989-05-19",
+    "age": 36,
+    "phone_number": "+90 552 922 35 82",
     "chronic_conditions": [],
-    "medications": [],
+    "medications": ["Decavit", "Ecoprin", "Bekunis"],
     "allergies": [],
     "past_surgeries": []
   },
   "visits": [
     {
-      "visit_date": "YYYY-MM-DD",
-      "visit_type": "Muayene Türü",
-      "last_menstrual_date": "YYYY-MM-DD veya null (SADECE İLK İÇİN)",
-      "menstrual_day": sayı veya null,
-      "complaint": "TAM ŞIKAYET METNİ",  
-      "usg": "TAM USG BİLGİSİ (hafta vs)",
-      "diagnosis": "TAM TEŞHİS",
-      "outcome": "TAM SONUÇ-TEDavi-REÇETE (ilaçlar burada!)"
+      "visit_date": "2025-01-20",
+      "visit_type": "İlk Geliş",
+      "last_menstrual_date": "2025-01-20",
+      "menstrual_day": null,
+      "complaint": "Gebelik. Şu an bir şikayeti yok.",  
+      "usg": "13-2/7 haftalık. FKA +. Gross anomali izlenmedi.",
+      "diagnosis": "Çift kese. Cin-kız.",
+      "outcome": "NİFT test önerildi. Decavit, ecoprin verildi."
+    },
+    {
+      "visit_date": "2025-08-12",
+      "visit_type": "Kontrol",
+      "last_menstrual_date": null,
+      "menstrual_day": null,
+      "complaint": "Ellerde uyuşma ve odem olmuş",
+      "usg": "30-1/7 haftalık. FKA +. Amnion sıvısı normal alt sınır. TA: 1522 gr.",
+      "diagnosis": "TİT de bakteri uri mevcut.",
+      "outcome": "Piyeloseptyl, magninore plus verildi."
     }
   ]
 }
 
-=== ÖNEMLİ ===
-- Eğer bir alan belirtilmemiş → boş string "" (null değil)
-- Eğer veri yoksa → [] (array) veya null
-- HİÇBİR BİLGİ ATLANMAYACAK
-- "Belirtilmemiş" yazıyorsa outcome/complaint = ""
+=== ÖNEMLİ KURALLAR ===
+- HER BİLGİ MUTLAKA YAZILACAK - 3 defa kontrol et!
+- Boş campos: "" (empty string) veya null değil
+- "Belirtilmemiş" yazıyorsa → "" (empty string)
+- Yan yana yazılan bilgiler: "Ellerde uyuşma ve odem olmuş. TİT de bakteri uri mevcut." 
+  → İKİSİ DE YAZ! Split et complaint/diagnosis alanlarına!
 - Tarihleri hep YYYY-MM-DD yap
+- Lab bulguları (TİT, bakteri, kultur) diagnosis'e YAZ!
+- İlaçları outcome'a YAZ!
 
 DOSYA İÇERİĞİ:
 `;

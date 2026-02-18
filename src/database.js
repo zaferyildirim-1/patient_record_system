@@ -26,11 +26,7 @@ async function initializeDatabase() {
       age INTEGER,
       birth_date TEXT,
       phone_number TEXT,
-      email TEXT,
       address TEXT,
-      blood_type TEXT,
-      marital_status TEXT,
-      occupation TEXT,
       emergency_contact_name TEXT,
       emergency_contact_phone TEXT,
       chronic_conditions TEXT,
@@ -151,22 +147,17 @@ function createPatient(patientData) {
   
   db.run(`
     INSERT INTO patients (
-      patient_code, full_name, age, birth_date, phone_number, email,
-      address, blood_type, marital_status, occupation,
-      emergency_contact_name, emergency_contact_phone,
+      patient_code, full_name, age, birth_date, phone_number,
+      address, emergency_contact_name, emergency_contact_phone,
       chronic_conditions, medications, allergies, past_surgeries
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     code,
     patientData.full_name,
     patientData.age,
     patientData.birth_date || null,
     patientData.phone_number || null,
-    patientData.email || null,
     patientData.address || null,
-    patientData.blood_type || null,
-    patientData.marital_status || null,
-    patientData.occupation || null,
     patientData.emergency_contact_name || null,
     patientData.emergency_contact_phone || null,
     stringifyArrayField(patientData.chronic_conditions),
@@ -208,9 +199,8 @@ function getPatientById(id) {
 function updatePatient(id, patientData) {
   db.run(`
     UPDATE patients SET
-      full_name = ?, age = ?, birth_date = ?, phone_number = ?, email = ?,
-      address = ?, blood_type = ?, marital_status = ?, occupation = ?,
-      emergency_contact_name = ?, emergency_contact_phone = ?,
+      full_name = ?, age = ?, birth_date = ?, phone_number = ?,
+      address = ?, emergency_contact_name = ?, emergency_contact_phone = ?,
       chronic_conditions = ?, medications = ?, allergies = ?, past_surgeries = ?,
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
@@ -219,11 +209,7 @@ function updatePatient(id, patientData) {
     patientData.age,
     patientData.birth_date || null,
     patientData.phone_number || null,
-    patientData.email || null,
     patientData.address || null,
-    patientData.blood_type || null,
-    patientData.marital_status || null,
-    patientData.occupation || null,
     patientData.emergency_contact_name || null,
     patientData.emergency_contact_phone || null,
     stringifyArrayField(patientData.chronic_conditions),

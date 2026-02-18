@@ -65,49 +65,71 @@ async function parseWithAI(text, fileName) {
     response_format: { type: 'json_object' }
   });
 
-  const parsed = JSON.parse(completion.choices[0].message.content);
-  console.log(`  ✅ ${parsed.visits?.length || 0} muayene kaydı bulundu`);
-  return parsed;
+  const content = completion.choices[0].message.content;
+  console.log(`  📝 AI output (ilk 200 char): ${content.substring(0, 200)}...`);
+  
+  try {
+    const parsed = JSON.parse(content);
+    console.log(`  ✅ ${parsed.visits?.length || 0} muayene kaydı bulundu`);
+    return parsed;
+  } catch (parseErr) {
+    console.error(`  ❌ JSON parse hatası: ${parseErr.message}`);
+    console.error(`  Content: ${content.substring(0, 500)}`);
+    throw parseErr;
+  }
 }
 
 async function saveToDatabase(data) {
-  const patientId = db.createPatient({
-    full_name: data.patient.full_name,
-    age: data.patient.age,
-    birth_date: data.patient.birth_date,
-    phone_number: data.patient.phone_number,
-    chronic_conditions: data.patient.chronic_conditions || [],
-    medications: data.patient.medications || [],
-    allergies: data.patient.allergies || [],
-    past_surgeries: data.patient.past_surgeries || []
-  });
+  try {
+    if (!data.patient) {
+      throw new Error('Patient data missing from parsed data');
+    }
 
-  console.log(`  💾 Hasta kaydedildi: ${data.patient.full_name}`);
-
-  let count = 0;
-  for (const visit of data.visits || []) {
-    const visitDate = new Date(visit.visit_date);
-    const year = visitDate.getFullYear();
-    const weekNumber = getWeekNumber(visitDate);
-    
-    db.createMedicalRecord({
-      patient_id: patientId,
-      visit_date: visit.visit_date,
-      visit_order: count + 1,
-      visit_type: visit.visit_type || 'Kontrol',
-      visit_week: `${year}-W${String(weekNumber).padStart(2, '0')}`,
-      last_menstrual_date: visit.last_menstrual_date || null,
-      menstrual_day: visit.menstrual_day || null,
-      complaint: visit.complaint || '',
-      usg: visit.usg || '',
-      diagnosis: visit.diagnosis || '',
-      outcome: visit.outcome || ''
+    const patient = db.createPatient({
+      full_name: data.patient.full_name,
+      age: data.patient.age,
+      birth_date: data.patient.birth_date,
+      phone_number: data.patient.phone_number,
+      chronic_conditions: data.patient.chronic_conditions || [],
+      medications: data.patient.medications || [],
+      allergies: data.patient.allergies || [],
+      past_surgeries: data.patient.past_surgeries || []
     });
-    count++;
-  }
 
-  console.log(`  ✅ ${count} muayene kaydı eklendi\n`);
-  return count;
+    if (!patient || !patient.id) {
+      throw new Error('Failed to create patient - no ID returned');
+    }
+
+    console.log(`  💾 Hasta kaydedildi: ${data.patient.full_name} (ID: ${patient.id})`);
+
+    let count = 0;
+    for (const visit of data.visits || []) {
+      const visitDate = new Date(visit.visit_date);
+      const year = visitDate.getFullYear();
+      const weekNumber = getWeekNumber(visitDate);
+      
+      db.createMedicalRecord({
+        patient_id: patient.id,
+        visit_date: visit.visit_date,
+        visit_order: count + 1,
+        visit_type: visit.visit_type || 'Kontrol',
+        visit_week: `${year}-W${String(weekNumber).padStart(2, '0')}`,
+        last_menstrual_date: visit.last_menstrual_date || null,
+        menstrual_day: visit.menstrual_day || null,
+        complaint: visit.complaint || '',
+        usg: visit.usg || '',
+        diagnosis: visit.diagnosis || '',
+        outcome: visit.outcome || ''
+      });
+      count++;
+    }
+
+    console.log(`  ✅ ${count} muayene kaydı eklendi\n`);
+    return count;
+  } catch (err) {
+    console.error(`  ❌ Veritabanı hatası: ${err.message}`);
+    throw err;
+  }
 }
 
 function getWeekNumber(date) {
@@ -128,11 +150,16 @@ async function processDocx(filePath) {
     console.log(`  📖 ${text.length} karakter okundu`);
 
     const parsed = await parseWithAI(text, fileName);
+    
+    // AI output'unu yazdır (debug)
+    console.log(`  📋 Parsed data:`, JSON.stringify(parsed, null, 2).substring(0, 300) + '...');
+    
     const count = await saveToDatabase(parsed);
 
     return { success: true, fileName, patient: parsed.patient.full_name, count };
   } catch (error) {
-    console.error(`  ❌ Hata: ${error.message}\n`);
+    console.error(`  ❌ Hata: ${error.message}`);
+    console.error(`  Stack: ${error.stack}`);
     return { success: false, fileName, error: error.message };
   }
 }

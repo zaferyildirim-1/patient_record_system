@@ -11,43 +11,67 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-const PROMPT = `Bu kadın doğum hastası dosyasından bilgileri JSON formatında çıkar.
+const PROMPT = `KADIN DOĞUM HASTASI DOSYASINI TAM OLARAK JSON'A ÇEVİR. HİÇBİR BİLGİ ATLANMAMALI!
 
-Kurallar:
-1. Ad Soyad, D.T (doğum tarihi), Telefon numarasını zorunlu bul
-2. Yaşı doğum tarihinden hesapla (bugün: 18 Şubat 2026)
-3. Tarihleri YYYY-MM-DD formatına çevir
-4. Her tarih (örn: 07.08.2025) bir muayene kaydıdır
-5. SAT (Son Adet Tarihi) varsa al, yoksa null
-6. "Adetin X. Günü" ifadesinden sayıyı al, yoksa null
-7. USG, Şikayet, Teşhis, Tedavi/Reçete bilgilerini muayene kayıtlarına ayır
-8. Eğer dosyada kronik hastalıklar, ilaçlar, alerjiler, operasyon geçmişi varsa not et
+=== HASTA BİLGİSİ (DOSYA BAŞINDA) ===
+1. Ad Soyad: Zorunlu, tam adı bul
+2. Doğum Tarihi: Bulabiliyor musun? YYYY-MM-DD biçim (bilmiyorsan null)
+3. Yaşı: Doğum tarihinden hesapla (bugün: 18 Şubat 2026)
+4. Telefon: Bulabiliyor musun? +90 ile başlayan format (bilmiyorsan null)
+5. Kronik Hastalıklar: Dosyada genel bir hastalık tariflenmişse array, yoksa []
+6. İlaçlar: SADECE HASTA AÇIKLAMALARINDA geçen ilaçlar (muayenelerdekiler değil) → array
+7. Alerjiler: Belirtilmişse, yoksa []
+8. Operasyonlar: Belirtilmişse (sezaryen, vs), yoksa []
 
-JSON formatı:
+=== MUAYENE KAYITLARı (ZİYARET LİSTESİ) ===
+HER ZİYARET İÇİN BUNU AL:
+
+1. **Tarih**: "20.01.2025" → "2025-01-20" 
+2. **Muayene Türü** (visit_type): "Rutin Kontrol", "Sezaryan Sonu Kontrol" vb
+3. **SAT** (Son Adet Tarihi): SADECE İLK MUAYENEDE var mı kontrol et! Sonrakilerde değil
+4. **Adetin Günü**: "Adetin X. Günü" yazılı mı? Sayıyı çıkar, yoksa null
+5. **Şikayet**: "Eller ve ayaklarda şişlik olmuş" - TÜM şikayeti yaz, kısma 
+6. **USG**: "37 haftalık" veya "30-1/7 haftalık" - TÜM ifadeyi kopyala
+7. **Teşhis**: "FKA +. Baş duruş." - TÜM teşhisi yaz, eksik bırakma
+8. **Sonuç-Tedavi-Reçete**: "İnsizyon yeri temiz, pansuman yapıştı" - TAM YAZDIR
+   - Bu kısımda ilaç, reçete, öneriler, tedavi HEPSI olabilir - HEPSİNİ OUTCOME'a yaz!
+
+=== ZİYARETLER SIRALAMASI ===
+- EN ESKİ'DEN EN YENİ'YE (kronolojik sıra)
+- Tarihler artışlı olmalı
+
+=== JSON ÇIKTISI ===
 {
   "patient": {
     "full_name": "...",
-    "birth_date": "YYYY-MM-DD",
+    "birth_date": "YYYY-MM-DD veya null",
     "age": sayı,
-    "phone_number": "+90 XXX XXX XXXX",
-    "chronic_conditions": ["...", "..."] veya [],
-    "medications": ["...", "..."] veya [],
-    "allergies": ["...", "..."] veya [],
-    "past_surgeries": ["...", "..."] veya []
+    "phone_number": "+90 ... veya null",
+    "chronic_conditions": [],
+    "medications": [],
+    "allergies": [],
+    "past_surgeries": []
   },
   "visits": [
     {
       "visit_date": "YYYY-MM-DD",
-      "visit_type": "Rutin Kontrol",
-      "last_menstrual_date": "YYYY-MM-DD veya null",
+      "visit_type": "Muayene Türü",
+      "last_menstrual_date": "YYYY-MM-DD veya null (SADECE İLK İÇİN)",
       "menstrual_day": sayı veya null,
-      "complaint": "...",
-      "usg": "...",
-      "diagnosis": "...",
-      "outcome": "..."
+      "complaint": "TAM ŞIKAYET METNİ",  
+      "usg": "TAM USG BİLGİSİ (hafta vs)",
+      "diagnosis": "TAM TEŞHİS",
+      "outcome": "TAM SONUÇ-TEDavi-REÇETE (ilaçlar burada!)"
     }
   ]
 }
+
+=== ÖNEMLİ ===
+- Eğer bir alan belirtilmemiş → boş string "" (null değil)
+- Eğer veri yoksa → [] (array) veya null
+- HİÇBİR BİLGİ ATLANMAYACAK
+- "Belirtilmemiş" yazıyorsa outcome/complaint = ""
+- Tarihleri hep YYYY-MM-DD yap
 
 DOSYA İÇERİĞİ:
 `;

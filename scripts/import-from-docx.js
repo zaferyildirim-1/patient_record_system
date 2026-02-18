@@ -78,28 +78,44 @@ DOSYA İÇERİĞİ:
 
 async function parseWithAI(text, fileName) {
   console.log(`  🤖 AI ile parse ediliyor...`);
+  console.log(`  🔑 API Key: ${process.env.OPENAI_API_KEY ? '✅ Var' : '❌ YOK'}`);
   
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      { role: 'system', content: 'Türkçe hasta dosyalarını JSON formatına çevirirsin. Sadece JSON döndür.' },
-      { role: 'user', content: PROMPT + text }
-    ],
-    temperature: 0.1,
-    response_format: { type: 'json_object' }
-  });
-
-  const content = completion.choices[0].message.content;
-  console.log(`  📝 AI output (ilk 200 char): ${content.substring(0, 200)}...`);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
   
   try {
-    const parsed = JSON.parse(content);
-    console.log(`  ✅ ${parsed.visits?.length || 0} muayene kaydı bulundu`);
-    return parsed;
-  } catch (parseErr) {
-    console.error(`  ❌ JSON parse hatası: ${parseErr.message}`);
-    console.error(`  Content: ${content.substring(0, 500)}`);
-    throw parseErr;
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: 'Türkçe hasta dosyalarını JSON formatına çevirirsin. Sadece JSON döndür.' },
+        { role: 'user', content: PROMPT + text }
+      ],
+      temperature: 0.1,
+      response_format: { type: 'json_object' }
+    });
+
+    clearTimeout(timeoutId);
+    const content = completion.choices[0].message.content;
+    console.log(`  📝 AI output (ilk 200 char): ${content.substring(0, 200)}...`);
+    
+    try {
+      const parsed = JSON.parse(content);
+      console.log(`  ✅ ${parsed.visits?.length || 0} muayene kaydı bulundu`);
+      return parsed;
+    } catch (parseErr) {
+      console.error(`  ❌ JSON parse hatası: ${parseErr.message}`);
+      throw parseErr;
+    }
+  } catch (apiErr) {
+    clearTimeout(timeoutId);
+    console.error(`  ❌ OpenAI API Hatası: ${apiErr.message}`);
+    console.error(`     Status: ${apiErr.status}`);
+    console.error(`     Type: ${apiErr.constructor.name}`);
+    if (apiErr.status === 401) console.error(`     → API Key geçersiz veya süresi dolmuş`);
+    if (apiErr.status === 429) console.error(`     → Rate limit aşıldı, lütfen bekleyin`);
+    if (apiErr.status === 500) console.error(`     → OpenAI API server hatası`);
+    if (apiErr.code === 'ECONNREFUSED') console.error(`     → Ağa bağlanılamıyor`);
+    throw apiErr;
   }
 }
 

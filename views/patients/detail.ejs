@@ -7,6 +7,13 @@
 </head>
 <body>
   <%- include('../partials/topbar') %>
+  <% 
+    function formatDate(date) {
+      if (!date) return '-';
+      const d = new Date(date);
+      return d.toLocaleDateString('tr-TR');
+    }
+  %>
   <header>
     <h1>Hasta Detayları</h1>
     <p>Temel bilgiler ve muayene kayıtları</p>
@@ -46,50 +53,47 @@
     </section>
 
     <section class="card">
-      <details class="accordion" <%= recordErrors.length ? 'open' : '' %>>
+      <details class="accordion">
         <summary class="accordion-summary">
           <span>Yeni Muayene Ekle</span>
         </summary>
         <div class="accordion-body">
-          <% if (recordErrors.length) { %>
-            <div class="alert">Lütfen şu alanları doldurun: <%= recordErrors.join(', ') %></div>
-          <% } %>
           <form action="/patients/<%= patient.id %>/records" method="POST">
             <div class="form-grid">
               <div>
                 <label for="visit_date">Ziyaret Tarihi *</label>
-                <input type="date" id="visit_date" name="visit_date" value="<%= recordDraft?.visit_date || '' %>" required lang="tr-TR">
+                <input type="date" id="visit_date" name="visit_date" value="<%= new Date().toISOString().split('T')[0] %>" required lang="tr-TR">
               </div>
               <div>
                 <label for="visit_type">Muayene Türü</label>
-                <input type="text" id="visit_type" name="visit_type" value="<%= recordDraft?.visit_type || '' %>" placeholder="Ör: Kontrol, İlk Muayene">
+                <input type="text" id="visit_type" name="visit_type" value="" placeholder="Ör: Kontrol, İlk Muayene">
               </div>
             </div>
             <div class="form-grid">
               <div>
                 <label for="last_menstrual_date">SAT (Son Adet Tarihi)</label>
-                <input type="date" id="last_menstrual_date" name="last_menstrual_date" value="<%= recordDraft?.last_menstrual_date || '' %>" lang="tr-TR">
+                <input type="date" id="last_menstrual_date" name="last_menstrual_date" value="" lang="tr-TR">
               </div>
               <div>
                 <label for="menstrual_day">Adetin Kaçıncı Günü</label>
-                <input type="text" id="menstrual_day" name="menstrual_day" value="<%= recordDraft?.menstrual_day || '' %>" placeholder="Ör: 3">
+                <input type="text" id="menstrual_day" name="menstrual_day" value="" placeholder="Ör: 3">
               </div>
             </div>
             <div>
               <label for="complaint">Şikayet</label>
-              <textarea id="complaint" name="complaint"><%= recordDraft?.complaint || '' %></textarea>
+              <textarea id="complaint" name="complaint"></textarea>
             </div>
             <div>
               <label for="usg">USG</label>
-              <textarea id="usg" name="usg" rows="3"><%= recordDraft?.usg || '' %></textarea>
+              <textarea id="usg" name="usg" rows="3"></textarea>
             </div>
             <div>
               <label for="diagnosis">Teşhis</label>
-              <textarea id="diagnosis" name="diagnosis"><%= recordDraft?.diagnosis || '' %></textarea>
+              <textarea id="diagnosis" name="diagnosis"></textarea>
             </div>
             <div>
               <label for="outcome">Sonuç - Tedavi - Reçete</label>
-              <textarea id="outcome" name="outcome"><%= recordDraft?.outcome || '' %></textarea>
+              <textarea id="outcome" name="outcome"></textarea>
             </div>
             <button type="submit">Muayene Kaydını Ekle</button>
           </form>

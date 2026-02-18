@@ -8,15 +8,13 @@
 <body class="dashboard">
   <%- include('partials/topbar') %>
   <% 
-    const fallbackNow = new Date();
-    const day = String(fallbackNow.getDate()).padStart(2, '0');
-    const month = String(fallbackNow.getMonth() + 1).padStart(2, '0');
-    const year = fallbackNow.getFullYear();
-    const weekday = fallbackNow.toLocaleDateString('tr-TR', { weekday: 'long' });
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const weekday = now.toLocaleDateString('tr-TR', { weekday: 'long' });
     const weekdayCapitalized = weekday.charAt(0).toUpperCase() + weekday.slice(1);
-    const heroMoment = (typeof currentMoment === 'string' && currentMoment.trim())
-      ? currentMoment
-      : `${day}.${month}.${year} ${weekdayCapitalized}`;
+    const heroMoment = `${day}.${month}.${year} ${weekdayCapitalized}`;
   %>
   <header class="hero">
       <div class="hero-content">

@@ -3,14 +3,17 @@ const db = require('../src/database');
 (async () => {
   await db.init();
 
-  console.log('📝 Örnek veriler ekleniyor...\n');
+  console.log('📝 Test Verileri Ekleniyor...\n');
 
-// Örnek 1: Elif Yıldız - Gebelik takibi
+// TEST DATA - İlk geliştirme oturumaları için dummy veriler
+// Gerçek hasta isimleri VS kimlik bilgileri KULLANMAYIN (KVKK uyumu)
+
+// Test 1: Gebelik takibi örneği
 const id1 = db.createPatient({
-  full_name: 'Elif Yıldız',
+  full_name: 'TEST_HASTA_001',
   age: 28,
   birth_date: '1998-05-12',
-  phone_number: '0532 456 78 90'
+  phone_number: '+90 XXX XXX XXXX'  // Maskelenmiş telefon
 });
 
 db.createRecord(id1, {
@@ -31,14 +34,14 @@ db.createRecord(id1, {
   outcome: 'Bulantı için B6 vitamini önerildi. İlaçlara devam. 4 hafta sonra kontrol'
 });
 
-console.log('✅ Elif Yıldız eklendi (2 muayene)');
+console.log('✅ TEST_HASTA_001 eklendi (2 muayene)');
 
-// Örnek 2: Selin Kara - PKOS tedavisi
+// Test 2: Hormon tedavisi örneği
 const id2 = db.createPatient({
-  full_name: 'Selin Kara',
+  full_name: 'TEST_HASTA_002',
   age: 35,
   birth_date: '1991-09-20',
-  phone_number: '+90 545 123 45 67'
+  phone_number: '+90 XXX XXX XXXX'  // Maskelenmiş telefon
 });
 
 db.createRecord(id2, {
@@ -46,8 +49,8 @@ db.createRecord(id2, {
   visit_type: 'Acil Muayene',
   last_menstrual_date: '2026-01-05',
   complaint: 'Adet düzensizliği, karın ağrısı',
-  diagnosis: 'Polikistik over sendromu (PKOS)',
-  outcome: 'Metformin 500mg başlandı. Diyet ve egzersiz önerildi. 2 ay sonra kontrol'
+  diagnosis: 'Hormon dengesizliği',
+  outcome: 'Tedavi başlandı. Diyet ve egzersiz önerildi. 2 ay sonra kontrol'
 });
 
 db.createRecord(id2, {
@@ -55,11 +58,11 @@ db.createRecord(id2, {
   visit_type: 'Kontrol Muayenesi',
   last_menstrual_date: '2026-01-05',
   complaint: 'İlaç kullanımı sonrası kontrol',
-  diagnosis: 'PKOS tedaviye yanıt veriyor, hormon düzeyleri düzeldi',
-  outcome: 'İlaç dozunda değişiklik yok. Kilo kaybı devam etmeli. 1 ay sonra kontrol'
+  diagnosis: 'Tedaviye iyi yanıt veriliyor',
+  outcome: 'İlaç dozunda değişiklik yok. Diyet devam. 1 ay sonra kontrol'
 });
 
-console.log('✅ Selin Kara eklendi (2 muayene)');
+console.log('✅ TEST_HASTA_002 eklendi (2 muayene)');
 
 console.log('\n📊 Özet:');
 console.log('   • 2 hasta eklendi');

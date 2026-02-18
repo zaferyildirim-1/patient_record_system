@@ -7,13 +7,14 @@ const database = require('../src/database');
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// 3 TEST DOSYASI
-const FILES_TO_IMPORT = [
-  'Areej I. I. Wıshah  .docx',
-  'Asya Deryal .docx'
-];
+// DOCX IMPORT - Environment değişkenlerini kullan
+const DOCX_FOLDER = process.env.DOCX_IMPORT_FOLDER || './imports';
 
-const DOCX_FOLDER = '/Users/zaferyildirim/Desktop/Hasta Muayene dosyaları';
+// İmport edilecek dosya listesi - KOMUT SATIRIINDAN AL
+// Örnek: node batch-import-gpt4o.js /path/to/file1.docx /path/to/file2.docx
+const FILES_TO_IMPORT = process.argv.slice(2).length > 0 
+  ? process.argv.slice(2) 
+  : [];
 
 // AŞAMA 1: TARİHLERE GÖRE BÖLME PROMPT
 const SPLIT_PROMPT = `Sen bir tıbbi metin ayırma uzmanısın. Verilen metni TARİHLERE GÖRE böleceksin.

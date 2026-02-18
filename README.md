@@ -29,11 +29,58 @@ Tek hekimli kadin dogum klinigi icin gelistirilen basit hasta kayit web uygulama
   ```
 - Varsayilan adres: http://localhost:3000
 
-## Kullanim
-1. Oturum acmak icin kullanici adi `huseyinsert` ve sifre `huseyinsert213` bilgilerini girin.
-2. Ana sayfadan "Yeni Hasta Ekle" ile temel bilgileri kaydedin.
-3. Hasta detay sayfasinda muayene formunu kullanarak sikayet, teshis ve sonuc bilgilerini girin.
-4. Gerekirse muayene kayitlarini silerek sadece ilgili ziyareti kaldirabilirsiniz.
+## Kurulum & İLK ÇALIŞTIRMA
+
+### 1. `.env` Dosyası Hazırlama
+1. `.env.example` dosyasını kopyalayarak `.env` oluştur:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. `.env` dosyasını düzenle ve aşağıdaki bilgileri kendi değerlerinizle değiştir:
+   ```dotenv
+   OPENAI_API_KEY=sk-your-key-here          # OpenAI API anahtarı (opsiyonel)
+   SESSION_SECRET=your-64-char-hex-string   # Güvenlik anahtarı
+   APP_USER=your-username                   # Admin kullanıcı adı
+   APP_PASSWORD=your-strong-password        # Admin şifresi
+   ```
+
+### 2. SESSION_SECRET Oluşturma
+Güçlü bir SESSION_SECRET oluştur:
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+### 3. Uygulamayı Başlat
+```bash
+npm start
+```
+Sistem, `.env` dosyasında tanımladığınız `APP_USER` ve `APP_PASSWORD` bilgileri ile hoşlanacaktır.
+
+## Kullanım
+1. Uygulamaya gir ve `.env` dosyasında belirttiğin kullanıcı adı/şifre ile oturum aç
+2. Ana sayfadan "Yeni Hasta Ekle" ile temel bilgileri kaydedin
+3. Hasta detay sayfasında muayene formunu kullanarak şikayet, tanı ve sonuç bilgilerini girin
+4. Gerekirse muayene kayıtlarını silerek sadece ilgili ziyareti kaldırabilirsiniz
+
+## GÜVENLİK ÖNEMLERİ
+
+⚠️ **İLK BAŞLATMADA MUTLAKA:**
+- [ ] `.env` dosyasında `APP_PASSWORD` KENDI güçlü şifreniz ile değiştirin
+- [ ] `SESSION_SECRET` olarak rastgele bir 64-karakterlik string oluşturun
+- [ ] OpenAI API anahtarı (DOCX import için) varsa `.env` dosyasında saklayın
+
+⚠️ **Üretim (Production) için:**
+- Tüm kimlik bilgileri `.env` dosyasında (Git repo'suna KOMIT EdİLMEYEN)
+- Veritabanı yedekleri şifreli bir dizinde saklayın
+- Şifreler düzenli olarak değiştiriniz
+- HTTPS kullanarak bağlantıları şifreleyin
+
+⚠️ **NE YAPMAYIN:**
+- ❌ Şifreleri README'ye veya kod yorumlarına yazmayın
+- ❌ API anahtarlarını repository'ye commit etmeyin
+- ❌ Kişi adlarını test verisinde kullanmayın (KVKK ihlali)
+- ❌ Hasta telefon numaralarını açık metin olarak saklamayın
 
 ## CSV Yedekleri
 - Manuel yedek almak icin:

@@ -4,6 +4,8 @@
 # Database (contains patient data)
 clinic.db
 clinic.db-journal
+clinic.db.backup*
+clinic.db.old
 
 # Session storage (contains user sessions)
 .sessions/

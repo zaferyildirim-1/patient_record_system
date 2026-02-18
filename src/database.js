@@ -26,7 +26,6 @@ async function initializeDatabase() {
       age INTEGER,
       birth_date TEXT,
       phone_number TEXT,
-      address TEXT,
       emergency_contact_name TEXT,
       emergency_contact_phone TEXT,
       chronic_conditions TEXT,
@@ -148,16 +147,15 @@ function createPatient(patientData) {
   db.run(`
     INSERT INTO patients (
       patient_code, full_name, age, birth_date, phone_number,
-      address, emergency_contact_name, emergency_contact_phone,
+      emergency_contact_name, emergency_contact_phone,
       chronic_conditions, medications, allergies, past_surgeries
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     code,
     patientData.full_name,
     patientData.age,
     patientData.birth_date || null,
     patientData.phone_number || null,
-    patientData.address || null,
     patientData.emergency_contact_name || null,
     patientData.emergency_contact_phone || null,
     stringifyArrayField(patientData.chronic_conditions),
@@ -200,7 +198,7 @@ function updatePatient(id, patientData) {
   db.run(`
     UPDATE patients SET
       full_name = ?, age = ?, birth_date = ?, phone_number = ?,
-      address = ?, emergency_contact_name = ?, emergency_contact_phone = ?,
+      emergency_contact_name = ?, emergency_contact_phone = ?,
       chronic_conditions = ?, medications = ?, allergies = ?, past_surgeries = ?,
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
@@ -209,7 +207,6 @@ function updatePatient(id, patientData) {
     patientData.age,
     patientData.birth_date || null,
     patientData.phone_number || null,
-    patientData.address || null,
     patientData.emergency_contact_name || null,
     patientData.emergency_contact_phone || null,
     stringifyArrayField(patientData.chronic_conditions),

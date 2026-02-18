@@ -38,6 +38,11 @@ created_at         TIMESTAMP
 updated_at         TIMESTAMP
 ```
 
+**⚠️ NOTLAR:**
+- **Kronik Hastalık, İlaç, Alerji, Operasyon** → `patients` tablosunda depolanır (hastanın kayıt bilgisiylen ilişkilidir)
+- **Muayene Sırasında** bu bilgiler **read-only** olarak gösterilir, doktor üzerine yeni bilgi ekleyebilir
+- `additional_chronic_conditions`, `additional_medications`, `additional_allergies`, `additional_surgeries` → opsiyonel olarak `outcome` veya ayrı notlar alanında yazılır
+
 ---
 
 ## 🔧 Eklenecek Alanlar (Vitals & Health)

@@ -30,24 +30,98 @@
     <% } %>
 
     <form action="<%= action %>" method="<%= method %>">
+      <h3>Kişisel Bilgiler</h3>
       <div>
         <label for="full_name">Ad Soyad *</label>
         <input type="text" id="full_name" name="full_name" value="<%= patient?.full_name || '' %>" required>
       </div>
 
-      <div>
-        <label for="age">Yaş *</label>
-        <input type="number" id="age" name="age" value="<%= patient?.age || '' %>" min="0" required>
+      <div class="form-grid">
+        <div>
+          <label for="age">Yaş *</label>
+          <input type="number" id="age" name="age" value="<%= patient?.age || '' %>" min="0" max="150" required>
+        </div>
+        <div>
+          <label for="birth_date">Doğum Tarihi</label>
+          <input type="date" id="birth_date" name="birth_date" value="<%= patient?.birth_date || '' %>" lang="tr-TR">
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div>
+          <label for="phone_number">Cep Numarası</label>
+          <input type="tel" id="phone_number" name="phone_number" value="<%= patient?.phone_number || '' %>" placeholder="+90 XXX XXX XXXX">
+        </div>
+        <div>
+          <label for="email">E-mail</label>
+          <input type="email" id="email" name="email" value="<%= patient?.email || '' %>" placeholder="hasta@example.com">
+        </div>
       </div>
 
       <div>
-        <label for="birth_date">Doğum Tarihi</label>
-        <input type="date" id="birth_date" name="birth_date" value="<%= patient?.birth_date || '' %>" lang="tr-TR">
+        <label for="address">Adres</label>
+        <textarea id="address" name="address" rows="2" placeholder="Adres"><%= patient?.address || '' %></textarea>
+      </div>
+
+      <h3>Sağlık Bilgileri</h3>
+      <div class="form-grid">
+        <div>
+          <label for="blood_type">Kan Grubu</label>
+          <select id="blood_type" name="blood_type">
+            <option value="">-- Seçiniz --</option>
+            <option value="A" <%= patient?.blood_type === 'A' ? 'selected' : '' %>>A</option>
+            <option value="B" <%= patient?.blood_type === 'B' ? 'selected' : '' %>>B</option>
+            <option value="AB" <%= patient?.blood_type === 'AB' ? 'selected' : '' %>>AB</option>
+            <option value="O" <%= patient?.blood_type === 'O' ? 'selected' : '' %>>O</option>
+          </select>
+        </div>
+        <div>
+          <label for="marital_status">Medeni Durum</label>
+          <select id="marital_status" name="marital_status">
+            <option value="">-- Seçiniz --</option>
+            <option value="Evli" <%= patient?.marital_status === 'Evli' ? 'selected' : '' %>>Evli</option>
+            <option value="Bekar" <%= patient?.marital_status === 'Bekar' ? 'selected' : '' %>>Bekar</option>
+            <option value="Boşanmış" <%= patient?.marital_status === 'Boşanmış' ? 'selected' : '' %>>Boşanmış</option>
+            <option value="Dul" <%= patient?.marital_status === 'Dul' ? 'selected' : '' %>>Dul</option>
+          </select>
+        </div>
       </div>
 
       <div>
-        <label for="phone_number">Cep Numarası</label>
-        <input type="tel" id="phone_number" name="phone_number" value="<%= patient?.phone_number || '' %>" placeholder="Telefon numarası">
+        <label for="occupation">Meslek</label>
+        <input type="text" id="occupation" name="occupation" value="<%= patient?.occupation || '' %>" placeholder="Mesleği yazınız">
+      </div>
+
+      <div>
+        <label for="chronic_conditions">Kronik Hastalıklar <small>(her biri yeni satırda)</small></label>
+        <textarea id="chronic_conditions" name="chronic_conditions" rows="3" placeholder="Örn: Hipertansiyon&#10;Diyabet&#10;Tiroit hastalığı"><%= patient?.chronic_conditions?.join('\n') || '' %></textarea>
+      </div>
+
+      <div>
+        <label for="medications">İlaçlar <small>(her biri yeni satırda)</small></label>
+        <textarea id="medications" name="medications" rows="3" placeholder="Örn: Metoprol 100mg&#10;Aspirin 100mg"><%= patient?.medications?.join('\n') || '' %></textarea>
+      </div>
+
+      <div>
+        <label for="allergies">Alerji/İlaç Intoleransı <small>(her biri yeni satırda)</small></label>
+        <textarea id="allergies" name="allergies" rows="3" placeholder="Örn: Penisilin&#10;Sulfonamidler"><%= patient?.allergies?.join('\n') || '' %></textarea>
+      </div>
+
+      <div>
+        <label for="past_surgeries">Geçmiş Operasyonlar <small>(her biri yeni satırda)</small></label>
+        <textarea id="past_surgeries" name="past_surgeries" rows="3" placeholder="Örn: Apendektomi (2015)&#10;Sezaryen (2018)"><%= patient?.past_surgeries?.join('\n') || '' %></textarea>
+      </div>
+
+      <h3>Acil Durum Kişi</h3>
+      <div class="form-grid">
+        <div>
+          <label for="emergency_contact_name">Ad Soyad</label>
+          <input type="text" id="emergency_contact_name" name="emergency_contact_name" value="<%= patient?.emergency_contact_name || '' %>" placeholder="Acil durum kişisinin adı">
+        </div>
+        <div>
+          <label for="emergency_contact_phone">Telefon</label>
+          <input type="tel" id="emergency_contact_phone" name="emergency_contact_phone" value="<%= patient?.emergency_contact_phone || '' %>" placeholder="+90 XXX XXX XXXX">
+        </div>
       </div>
 
       <button type="submit">Kaydet</button>

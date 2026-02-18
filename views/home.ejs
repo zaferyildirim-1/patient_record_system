@@ -15,6 +15,12 @@
     const weekday = now.toLocaleDateString('tr-TR', { weekday: 'long' });
     const weekdayCapitalized = weekday.charAt(0).toUpperCase() + weekday.slice(1);
     const heroMoment = `${day}.${month}.${year} ${weekdayCapitalized}`;
+    
+    function formatDate(dateStr) {
+      if (!dateStr) return '-';
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('tr-TR');
+    }
   %>
   <header class="hero">
       <div class="hero-content">

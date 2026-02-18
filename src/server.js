@@ -85,10 +85,52 @@ app.post('/login', (req, res) => {
 // GET / - Home page
 app.get('/', requireAuth, (req, res) => {
   const patients = db.getAllPatients();
+  
+  // Calculate statistics
+  const today = new Date().toISOString().split('T')[0];
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  
+  // Today's patients (empty list for now - no appointment system)
+  const todayPatients = [];
+  
+  // Count records from week
+  let weekRecords = 0;
+  patients.forEach(patient => {
+    const records = db.getMedicalRecordsByPatientId(patient.id);
+    records.forEach(record => {
+      if (record.visit_date >= weekAgo) {
+        weekRecords++;
+      }
+    });
+  });
+  
+  // Get all records for total count
+  let totalRecords = 0;
+  patients.forEach(patient => {
+    const records = db.getMedicalRecordsByPatientId(patient.id);
+    totalRecords += records.length;
+  });
+  
+  // Latest patient
+  const latestPatient = patients.length > 0 ? patients[0] : null;
+  
+  const stats = {
+    totalPatients: patients.length,
+    todayPatients: todayPatients.length,
+    weekRecords,
+    latestPatient,
+    totalRecords
+  };
+  
   res.render('home', { 
-    patients,
+    todayPatients,
+    stats,
     username: req.session.username,
-    total_patients: patients.length
+    formatDate: (date) => {
+      if (!date) return '-';
+      const d = new Date(date);
+      return d.toLocaleDateString('tr-TR');
+    }
   });
 });
 

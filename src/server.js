@@ -58,7 +58,7 @@ app.get('/login', (req, res) => {
   if (req.session.user_id) {
     return res.redirect('/');
   }
-  res.render('login', { error: null });
+  res.render('login', { error: null, username: '' });
 });
 
 // POST /login - Handle login
@@ -66,7 +66,7 @@ app.post('/login', (req, res) => {
   const { username, password } = req.body;
   
   if (!username || !password) {
-    return res.render('login', { error: 'Kullanıcı adı ve şifre gerekli' });
+    return res.render('login', { error: 'Kullanıcı adı ve şifre gerekli', username: username || '' });
   }
   
   // Simple validation - in production use actual user database
@@ -79,7 +79,7 @@ app.post('/login', (req, res) => {
     return res.redirect('/');
   }
   
-  res.render('login', { error: 'Geçersiz kullanıcı adı veya şifre' });
+  res.render('login', { error: 'Geçersiz kullanıcı adı veya şifre', username: username || '' });
 });
 
 // GET / - Home page

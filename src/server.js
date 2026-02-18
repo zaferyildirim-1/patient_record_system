@@ -164,7 +164,8 @@ app.get('/patients/new', requireAuth, (req, res) => {
     method: 'POST',
     title: 'Yeni Hastayı Kaydet',
     patient: null,
-    errors: []
+    errors: [],
+    username: req.session.username
   });
 });
 
@@ -185,7 +186,8 @@ app.post('/patients', requireAuth, (req, res) => {
       method: 'POST',
       title: 'Yeni Hastayı Kaydet',
       patient: req.body,
-      errors
+      errors,
+      username: req.session.username
     });
   }
   
@@ -217,7 +219,8 @@ app.post('/patients', requireAuth, (req, res) => {
       method: 'POST',
       title: 'Yeni Hastayı Kaydet',
       patient: req.body,
-      errors
+      errors,
+      username: req.session.username
     });
   }
 });
@@ -249,7 +252,8 @@ app.get('/patients/:id/edit', requireAuth, (req, res) => {
     method: 'POST',
     title: 'Hasta Bilgilerini Düzenle',
     patient,
-    errors: []
+    errors: [],
+    username: req.session.username
   });
 });
 
@@ -275,7 +279,8 @@ app.post('/patients/:id/update', requireAuth, (req, res) => {
       method: 'POST',
       title: 'Hasta Bilgilerini Düzenle',
       patient: req.body,
-      errors
+      errors,
+      username: req.session.username
     });
   }
   
@@ -307,7 +312,8 @@ app.post('/patients/:id/update', requireAuth, (req, res) => {
       method: 'POST',
       title: 'Hasta Bilgilerini Düzenle',
       patient: req.body,
-      errors
+      errors,
+      username: req.session.username
     });
   }
 });
@@ -325,7 +331,8 @@ app.get('/patients/:id/records/new', requireAuth, (req, res) => {
     title: 'Yeni Muayene Kaydı Oluştur',
     patient,
     record: { visit_date: new Date().toISOString().split('T')[0] },
-    errors: []
+    errors: [],
+    username: req.session.username
   });
 });
 
@@ -349,7 +356,8 @@ app.post('/patients/:id/records', requireAuth, (req, res) => {
       title: 'Yeni Muayene Kaydı Oluştur',
       patient,
       record: req.body,
-      errors
+      errors,
+      username: req.session.username
     });
   }
   
@@ -381,7 +389,8 @@ app.post('/patients/:id/records', requireAuth, (req, res) => {
       title: 'Yeni Muayene Kaydı Oluştur',
       patient,
       record: req.body,
-      errors
+      errors,
+      username: req.session.username
     });
   }
 });
@@ -404,7 +413,8 @@ app.get('/patients/:id/records/:record_id/edit', requireAuth, (req, res) => {
     title: 'Muayene Kaydını Düzenle',
     patient,
     record,
-    errors: []
+    errors: [],
+    username: req.session.username
   });
 });
 
@@ -446,7 +456,8 @@ app.post('/patients/:id/records/:record_id/update', requireAuth, (req, res) => {
       title: 'Muayene Kaydını Düzenle',
       patient,
       record: { ...record, ...req.body },
-      errors
+      errors,
+      username: req.session.username
     });
   }
 });

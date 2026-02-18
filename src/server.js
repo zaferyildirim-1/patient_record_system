@@ -137,9 +137,23 @@ app.get('/', requireAuth, (req, res) => {
 // GET /patients - Patients list
 app.get('/patients', requireAuth, (req, res) => {
   const patients = db.getAllPatients();
+  
+  // Add record counts to each patient for display
+  patients.forEach(patient => {
+    const records = db.getMedicalRecordsByPatientId(patient.id);
+    patient.record_count = records.length;
+  });
+  
   res.render('patients/index', { 
     patients,
-    username: req.session.username
+    username: req.session.username,
+    filters: {},
+    hasFilters: false,
+    formatDate: (date) => {
+      if (!date) return '-';
+      const d = new Date(date);
+      return d.toLocaleDateString('tr-TR');
+    }
   });
 });
 

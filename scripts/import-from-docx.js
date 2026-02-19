@@ -17,6 +17,37 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function isRetryableOpenAIError(err) {
+  if (!err) return false;
+  if (err.name === 'AbortError') return true;
+
+  const retryableStatuses = new Set([429, 500, 502, 503, 504]);
+  if (retryableStatuses.has(err.status)) return true;
+
+  const retryableCodes = new Set([
+    'ECONNRESET',
+    'ECONNREFUSED',
+    'ETIMEDOUT',
+    'EAI_AGAIN',
+    'ENOTFOUND'
+  ]);
+  if (retryableCodes.has(err.code)) return true;
+
+  return false;
+}
+
+function computeBackoffMs(attempt) {
+  const base = 1000;
+  const max = 60000;
+  const expo = Math.min(max, base * (2 ** (attempt - 1)));
+  const jitter = Math.floor(Math.random() * 250);
+  return Math.min(max, expo + jitter);
+}
+
 const PROMPT = `Sen deneyimli bir Kadın Hastalıkları ve Doğum uzmanı ve tıbbi dokümantasyon uzmanısın.
 Görevin: Verilen Türkçe hasta muayene metnini yapısal JSON verisine dönüştürmek.
 
@@ -99,44 +130,77 @@ DOSYA METNİ:
 async function parseWithAI(text, fileName) {
   console.log(`  🤖 AI ile parse ediliyor...`);
   console.log(`  🔑 API Key: ${process.env.OPENAI_API_KEY ? '✅ Var' : '❌ YOK'}`);
-  
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000);
-  
-  try {
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: 'Sadece geçerli JSON döndür. Açıklama veya markdown yazma.' },
-        { role: 'user', content: PROMPT + text + '\n>>>\n' }
-      ],
-      temperature: 0,
-      response_format: { type: 'json_object' }
-    });
 
-    clearTimeout(timeoutId);
-    const content = completion.choices[0].message.content;
-    console.log(`  📝 AI output (ilk 200 char): ${content.substring(0, 200)}...`);
-    
+  const maxAttempts = Number.isFinite(Number(process.env.OPENAI_MAX_ATTEMPTS))
+    ? Number(process.env.OPENAI_MAX_ATTEMPTS)
+    : 6;
+  const model = process.env.OPENAI_MODEL || 'gpt-4o';
+
+  let lastErr;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 90000);
+
     try {
-      const parsed = JSON.parse(content);
-      console.log(`  ✅ ${parsed.visits?.length || 0} muayene kaydı bulundu`);
-      return parsed;
-    } catch (parseErr) {
-      console.error(`  ❌ JSON parse hatası: ${parseErr.message}`);
-      throw parseErr;
+      const completion = await openai.chat.completions.create({
+        model,
+        messages: [
+          { role: 'system', content: 'Sadece geçerli JSON döndür. Açıklama veya markdown yazma.' },
+          { role: 'user', content: PROMPT + text + '\n>>>\n' }
+        ],
+        temperature: 0,
+        response_format: { type: 'json_object' },
+        signal: controller.signal
+      });
+
+      const content = completion.choices[0].message.content;
+      console.log(`  📝 AI output (ilk 200 char): ${content.substring(0, 200)}...`);
+
+      try {
+        const parsed = JSON.parse(content);
+        console.log(`  ✅ ${parsed.visits?.length || 0} muayene kaydı bulundu`);
+        return parsed;
+      } catch (parseErr) {
+        console.error(`  ❌ JSON parse hatası: ${parseErr.message}`);
+        lastErr = parseErr;
+        if (attempt < maxAttempts) {
+          const waitMs = computeBackoffMs(attempt);
+          console.warn(`  ⏳ Tekrar denenecek (parse). Deneme ${attempt}/${maxAttempts} → ${waitMs}ms bekleniyor`);
+          // eslint-disable-next-line no-await-in-loop
+          await sleep(waitMs);
+          continue;
+        }
+        throw parseErr;
+      }
+    } catch (apiErr) {
+      lastErr = apiErr;
+
+      const status = apiErr?.status;
+      const code = apiErr?.code;
+      console.error(`  ❌ OpenAI API Hatası: ${apiErr.message}`);
+      if (status) console.error(`     Status: ${status}`);
+      if (code) console.error(`     Code: ${code}`);
+      console.error(`     Type: ${apiErr.constructor?.name || typeof apiErr}`);
+      if (status === 401) console.error(`     → API Key geçersiz veya süresi dolmuş`);
+      if (status === 429) console.error(`     → Rate limit aşıldı, bekleyip tekrar denenecek`);
+      if (status === 500) console.error(`     → OpenAI API server hatası`);
+      if (code === 'ECONNREFUSED') console.error(`     → Ağa bağlanılamıyor`);
+
+      if (attempt < maxAttempts && isRetryableOpenAIError(apiErr)) {
+        const waitMs = computeBackoffMs(attempt);
+        console.warn(`  ⏳ Tekrar denenecek. Deneme ${attempt}/${maxAttempts} → ${waitMs}ms bekleniyor`);
+        // eslint-disable-next-line no-await-in-loop
+        await sleep(waitMs);
+        continue;
+      }
+
+      throw apiErr;
+    } finally {
+      clearTimeout(timeoutId);
     }
-  } catch (apiErr) {
-    clearTimeout(timeoutId);
-    console.error(`  ❌ OpenAI API Hatası: ${apiErr.message}`);
-    console.error(`     Status: ${apiErr.status}`);
-    console.error(`     Type: ${apiErr.constructor.name}`);
-    if (apiErr.status === 401) console.error(`     → API Key geçersiz veya süresi dolmuş`);
-    if (apiErr.status === 429) console.error(`     → Rate limit aşıldı, lütfen bekleyin`);
-    if (apiErr.status === 500) console.error(`     → OpenAI API server hatası`);
-    if (apiErr.code === 'ECONNREFUSED') console.error(`     → Ağa bağlanılamıyor`);
-    throw apiErr;
   }
+
+  throw lastErr;
 }
 
 async function saveToDatabase(data, fileName) {
@@ -212,12 +276,13 @@ async function processDocx(filePath) {
   const fileName = path.basename(filePath);
   console.log(`\n📄 ${fileName}`);
 
+  let extractedText = '';
   try {
     const result = await mammoth.extractRawText({ path: filePath });
-    const text = result.value;
-    console.log(`  📖 ${text.length} karakter okundu`);
+    extractedText = result.value;
+    console.log(`  📖 ${extractedText.length} karakter okundu`);
 
-    const parsed = await parseWithAI(text, fileName);
+    const parsed = await parseWithAI(extractedText, fileName);
     
     // AI output'unu yazdır (debug)
     console.log(`  📋 Parsed data:`, JSON.stringify(parsed, null, 2).substring(0, 300) + '...');
@@ -228,6 +293,28 @@ async function processDocx(filePath) {
   } catch (error) {
     console.error(`  ❌ Hata: ${error.message}`);
     console.error(`  Stack: ${error.stack}`);
+
+    try {
+      if (extractedText && extractedText.trim()) {
+        const errorsDir = path.join(__dirname, '../import-errors');
+        ensureDirSync(errorsDir);
+        const safeBase = (fileName || 'import').replace(/[^a-zA-Z0-9._-]/g, '_');
+        const errPath = path.join(errorsDir, `${safeBase}.txt`);
+        const payload = [
+          `FILE: ${fileName}`,
+          `ERROR: ${error.message}`,
+          `STACK: ${error.stack || ''}`,
+          '',
+          '--- EXTRACTED TEXT ---',
+          extractedText
+        ].join('\n');
+        fs.writeFileSync(errPath, payload);
+        console.error(`  🧾 Ham metin import-errors/${path.basename(errPath)} dosyasına kaydedildi`);
+      }
+    } catch (writeErr) {
+      console.error(`  ⚠️ Hata raporu yazılamadı: ${writeErr.message}`);
+    }
+
     return { success: false, fileName, error: error.message };
   }
 }

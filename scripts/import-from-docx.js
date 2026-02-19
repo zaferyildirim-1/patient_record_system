@@ -142,16 +142,18 @@ async function parseWithAI(text, fileName) {
     const timeoutId = setTimeout(() => controller.abort(), 90000);
 
     try {
-      const completion = await openai.chat.completions.create({
-        model,
-        messages: [
-          { role: 'system', content: 'Sadece geçerli JSON döndür. Açıklama veya markdown yazma.' },
-          { role: 'user', content: PROMPT + text + '\n>>>\n' }
-        ],
-        temperature: 0,
-        response_format: { type: 'json_object' },
-        signal: controller.signal
-      });
+      const completion = await openai.chat.completions.create(
+        {
+          model,
+          messages: [
+            { role: 'system', content: 'Sadece geçerli JSON döndür. Açıklama veya markdown yazma.' },
+            { role: 'user', content: PROMPT + text + '\n>>>\n' }
+          ],
+          temperature: 0,
+          response_format: { type: 'json_object' }
+        },
+        { signal: controller.signal }
+      );
 
       const content = completion.choices[0].message.content;
       console.log(`  📝 AI output (ilk 200 char): ${content.substring(0, 200)}...`);

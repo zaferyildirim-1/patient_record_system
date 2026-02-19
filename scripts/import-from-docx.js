@@ -7,134 +7,93 @@ const mammoth = require('mammoth');
 const OpenAI = require('openai');
 const db = require('../src/database');
 
+function ensureDirSync(dirPath) {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+}
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-const PROMPT = `KADIN DOĞUM HASTASI DOSYASINI TAM OLARAK JSON'A ÇEVİR. HİÇBİR BİLGİ ATLANMAMALI!
+const PROMPT = `Sen deneyimli bir Kadın Hastalıkları ve Doğum uzmanı ve tıbbi dokümantasyon uzmanısın.
+Görevin: Verilen Türkçe hasta muayene metnini yapısal JSON verisine dönüştürmek.
 
-⚠️ KRITIK: Her muayene kaydının hiç bir bilgisini atma - her satır, her bulgu, lab sonuçları, ilaçlar HEPSİ!
+SADECE geçerli JSON döndür. Markdown/açıklama/yazı döndürme.
+Klinik veri kaybı YASAK: Metindeki her tıbbi bilgi mutlaka bir alana yerleşsin.
 
-=== HASTA BİLGİSİ (DOSYA BAŞINDA) ===
-1. Ad Soyad: Zorunlu, tam adı bul
-2. Doğum Tarihi: Bulabiliyor musun? YYYY-MM-DD biçim (bilmiyorsan null)
-3. Yaşı: Doğum tarihinden hesapla (bugün: 18 Şubat 2026)
-4. Telefon: Bulabiliyor musun? +90 ile başlayan format (bilmiyorsan null)
-5. Kronik Hastalıklar: Dosyada genel bir hastalık tariflenmişse array, yoksa []
-6. İlaçlar: SADECE HASTA AÇIKLAMALARINDA geçen ilaçlar (muayenelerdekiler değil) → array
-7. Alerjiler: Belirtilmişse, yoksa []
-8. Operasyonlar: Belirtilmişse (sezaryen, vs), yoksa []
-
-=== MUAYENE KAYITLARı (ZİYARET LİSTESİ) ===
-⚠️ DİKKAT: Her muayenenin TARİHİ yazılı olmayabilir - konteksten çıkar!
-           SAT sadece ilk muayenede olabilir!
-           Muayene bulguları satırını hemen sonrası yazılı olabilir!
-
-HER ZİYARET İÇİN BUNU AL:
-
-1. **Tarih** (TÜM SATIR KONTROL ET): 
-   - "20.01.2025" yazılı mı? → "2025-01-20"
-   - Yoksa muayene açıklamasından sonra mı yazılı? Konteksten çıkar
-   - Tarih zorunlu!
-
-2. **Muayene Türü** (visit_type): "Rutin Kontrol", "Sezaryan Sonu Kontrol" vb
-   - Yazılı değilse "Kontrol" yaz3. **SAT** (Son Adet Tarihi): SADECE İLK MUAYENEDE var mı kontrol et!
-
-4. **Adetin Günü**: "Adetin X. Günü" yazılı mı? Sayıyı çıkar, yoksa null
-
-5. **Şikayet** (complaint): TÜM ŞIKAYETI - ATMA!
-   - "Ellerde uyuşma ve odem olmuş" - tamamını yaz
-   - "Kesinlikle eksik başı yok" - tamamını yaz
-   - "Bir şikayeti yok" - yine yaz!
-   - Şikayet yoksa "" (empty string)
-
-6. **LAB/KLİNİK BULGULAR** (diagnosis'e yaz!):
-   - "TİT de bakteri uri mevcut" yazılıysa MUTLAKA diagnosis'e yaz!
-   - "Ellerde uyuşma ve odem" yazılıysa YAZ!
-   - Tüm lab results, kultur sonuçları, klinik bulgular → diagnosis'e
-
-7. **USG BULGULARI** (usg alanına): 
-   - "USG: 30-1/7 haftalık" - TÜM İFADEYİ SAY
-   - Sonraki satırda "FKA +. Amnion sıvısı normal..." yazılıysa → TAM YAZDIR
-   - "TA: 1522 gr" yazılıysa → SAY
-   - "Baş duruş", "Makat duruş" → SAY
-   - TÜM STATİSTİK: "Gelişim yüzde 74 persantilde" → SAY!
-
-8. **SONUÇ-TEDavi-REÇETE** (outcome'a): TAM HER ŞEY!
-   - İnsizyon yeri temiz, pansuman → yaz
-   - "Piyeloseptyl, magninore plus verildi" → ILAÇLAR outcome'a!
-   - "Diyet önerildi" → yaz
-   - "Önerilerde bulunuldu" → yaz
-   - TÜM İLAÇLAR, TEDAVILER, ÖNERİLER → outcome'a DAHİL!
-
-=== YAYGOIN PROBLEM VE ÇÖZÜMÜ ===
-PROBLEM: "Ellerde uyuşma ve odem olmuş. TİT de bakteri uri mevcut."
-ÇÖZÜM: İKİ BİLGİ DE AYRı ALANLARA YAZ:
-  - complaint: "Ellerde uyuşma ve odem olmuş"
-  - diagnosis: "TİT de bakteri uri mevcut" (veya her ikiside diagnosis'e)
-
-SOROL: Her satırda birden fazla bilgi var mı?
-CEVAP: Evet → HEPSINI YAZ! Sadece split et alanlar arasında!
-
-=== ZİYARETLER SIRALAMASI ===
-- EN ESKİ'DEN EN YENİ'YE (kronolojik sıra)
-- Tarihler artışlı olmalı
-
-=== KONTROL LİSTESİ (hiç atma!) ===
-□ Complaint: Yok mu? "" yaz, var mı tamamını yaz
-□ USG: Hafta sayısı + tüm bulguları yaz (13 haftalık, 30-1/7, FKA +, etc) 
-□ Diagnosis: Lab/klinik bulgularını ekle (TİT, bakteri, kultur vb!)
-□ Outcome: İlaçları ekle (Piyeloseptyl, Magninore, Decavit, Ecoprin vb)
-□ Dates: YYYY-MM-DD format
-□ NO MISSING: "TİT" ve "bakteri uri" HER İKİSİ YAZ!
-
-=== JSON ÇIKTISI ===
+DÖNDÜRECEĞİN JSON ŞEMASI (anahtarları birebir koru):
 {
   "patient": {
-    "full_name": "Havva Didem Çercialioğlu",
-    "birth_date": "1989-05-19",
-    "age": 36,
-    "phone_number": "+90 552 922 35 82",
+    "full_name": "",
+    "birth_date": null,
+    "age": null,
+    "phone_number": null,
     "chronic_conditions": [],
-    "medications": ["Decavit", "Ecoprin", "Bekunis"],
+    "medications": [],
     "allergies": [],
     "past_surgeries": []
   },
   "visits": [
     {
-      "visit_date": "2025-01-20",
-      "visit_type": "İlk Geliş",
-      "last_menstrual_date": "2025-01-20",
-      "menstrual_day": null,
-      "complaint": "Gebelik. Şu an bir şikayeti yok.",  
-      "usg": "13-2/7 haftalık. FKA +. Gross anomali izlenmedi.",
-      "diagnosis": "Çift kese. Cin-kız.",
-      "outcome": "NİFT test önerildi. Decavit, ecoprin verildi."
-    },
-    {
-      "visit_date": "2025-08-12",
+      "visit_date": "",
       "visit_type": "Kontrol",
       "last_menstrual_date": null,
       "menstrual_day": null,
-      "complaint": "Ellerde uyuşma ve odem olmuş",
-      "usg": "30-1/7 haftalık. FKA +. Amnion sıvısı normal alt sınır. TA: 1522 gr.",
-      "diagnosis": "TİT de bakteri uri mevcut.",
-      "outcome": "Piyeloseptyl, magninore plus verildi."
+      "complaint": "",
+      "diagnosis": "",
+      "usg": "",
+      "outcome": ""
     }
   ]
 }
 
-=== ÖNEMLİ KURALLAR ===
-- HER BİLGİ MUTLAKA YAZILACAK - 3 defa kontrol et!
-- Boş campos: "" (empty string) veya null değil
-- "Belirtilmemiş" yazıyorsa → "" (empty string)
-- Yan yana yazılan bilgiler: "Ellerde uyuşma ve odem olmuş. TİT de bakteri uri mevcut." 
-  → İKİSİ DE YAZ! Split et complaint/diagnosis alanlarına!
-- Tarihleri hep YYYY-MM-DD yap
-- Lab bulguları (TİT, bakteri, kultur) diagnosis'e YAZ!
-- İlaçları outcome'a YAZ!
+BELGE YAPISI (genel):
+- En üstte hasta bilgileri olabilir: “Hastanın Adı Soyadı”, “D.T”, “Telefon numarası” vb.
+- Muayeneler genellikle bir TARİH ile başlar (örn: 11.07.2025). O tarihten bir sonraki tarihe kadar olan metin o ziyarete aittir.
+- Ziyaret içinde “Şikâyeti / Muayene Bulgusu / USG / Reçete / Sonuç / Öneri” başlıkları olabilir veya olmayabilir.
 
-DOSYA İÇERİĞİ:
+ALAN KURALLARI:
+1) patient:
+- full_name: “Hastanın Adı Soyadı”
+- birth_date: “D.T” veya “Doğum Tarihi” varsa YYYY-MM-DD’ye çevir (örn 16.09.1997 → 1997-09-16). Yoksa null.
+- age: birth_date varsa hesapla; yoksa null.
+- phone_number: telefon varsa +90 ile normalize et; yoksa null.
+- chronic_conditions / medications / allergies / past_surgeries: yalnızca hastanın genel bilgisi/öyküsünden (ziyaret reçetelerinden ilaç yazma).
+
+2) visits:
+- Her ziyarette tüm alanlar olmalı (boşsa "" veya null).
+- visit_date: mutlaka YYYY-MM-DD.
+
+3) ORPHAN (etiketsiz) METİN KURALI (kritik):
+- Ziyaret bölümünde “Şikâyeti:” etiketi olmasa bile, TARİH ile Muayene/USG/Reçete/Sonuç/Öneri arasında kalan açıklayıcı cümleler kaybolmayacak.
+- Bu tür etiketsiz metinleri öncelikle complaint alanına ekle.
+- Şikâyeti etiketi varsa complaint’e onu yaz; ayrıca tarih bloğunda kalan etiketsiz klinik/öykü metni de complaint’e ekle (veri kaybı olmasın).
+- Örnek tipik orphan metinler: “Eşinin sperm tahlili…”, “Adet görmüş.”, “Adetinin 9. Günü.”, “Adet rötarı.” gibi.
+ - Not: Etiketsiz metin bir LAB/TEST sonucu olsa bile (TİT, kültür, spermiyogram vb.) complaint alanına da mutlaka ekle. (İstersen diagnosis’e de ekleyebilirsin.)
+ - USG ölçümleri/bulguları (USG:, FKA, CRL, endometrium, folikül ölçüleri vb.) complaint’e yazma; usg alanına yaz.
+
+3b) MENSTRÜEL GÜN KURALI (kritik):
+- “Adetinin X. Günü”, “X. Günü”, “1. Günü”, “13. Günü” gibi ifadeler USG DEĞİLDİR.
+- Bu ifadelerden X sayısını menstrual_day alanına yaz.
+- complaint boş kalacaksa complaint içine en azından bu ifadeyi ekle (örn: “Adetinin 9. Günü.”).
+- Bu ifade “USG:” ile aynı satırda geçse bile complaint/menstrual_day’e taşınmalı.
+
+4) USG / diagnosis / outcome ayrımı:
+- usg: sadece ultrason ölçüm ve bulguları (FKA/CRL/hafta/endometrium/folikül ölçüleri/plasenta/amniyon vb.).
+- diagnosis: muayene bulguları + klinik değerlendirme + lab sonuçları (TİT/bakteri/kültür/spermiyogram vb.). USG ölçümlerini diagnosis’e yazma.
+- outcome: reçete/tedavi/plan/öneri/sonuç.
+ - Karışık başlık kuralı: “Muayene Bulgusu” içinde açıkça “USG” ile başlayan veya belirgin USG terimleri (uterus/over/endometrium/folikül/FKA/CRL/GS vb.) içeren cümleler varsa bunları usg alanına taşı; diagnosis alanında tekrar etme.
+
+5) Ziyaret sırası: kronolojik (en eski → en yeni).
+
+FORMAT ZORUNLULUĞU:
+- patient.birth_date ve visits[].visit_date mutlaka YYYY-MM-DD formatında olmalı. (örn 11.07.2025 → 2025-07-11)
+- patient.phone_number mümkünse "+90" ile başlamalı (örn: 533 022 00 68 → +90 533 022 00 68). Yapamazsan null.
+
+DOSYA METNİ:
+<<<
 `;
 
 async function parseWithAI(text, fileName) {
@@ -142,16 +101,16 @@ async function parseWithAI(text, fileName) {
   console.log(`  🔑 API Key: ${process.env.OPENAI_API_KEY ? '✅ Var' : '❌ YOK'}`);
   
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+  const timeoutId = setTimeout(() => controller.abort(), 60000);
   
   try {
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [
-        { role: 'system', content: 'Türkçe hasta dosyalarını JSON formatına çevirirsin. Sadece JSON döndür.' },
-        { role: 'user', content: PROMPT + text }
+        { role: 'system', content: 'Sadece geçerli JSON döndür. Açıklama veya markdown yazma.' },
+        { role: 'user', content: PROMPT + text + '\n>>>\n' }
       ],
-      temperature: 0.1,
+      temperature: 0,
       response_format: { type: 'json_object' }
     });
 
@@ -180,11 +139,19 @@ async function parseWithAI(text, fileName) {
   }
 }
 
-async function saveToDatabase(data) {
+async function saveToDatabase(data, fileName) {
   try {
     if (!data.patient) {
       throw new Error('Patient data missing from parsed data');
     }
+
+    // Log AI output to file for verification (per-file)
+    const outputsDir = path.join(__dirname, '../import-outputs');
+    ensureDirSync(outputsDir);
+    const safeBase = (fileName || 'import').replace(/[^a-zA-Z0-9._-]/g, '_');
+    const outPath = path.join(outputsDir, `${safeBase}.json`);
+    fs.writeFileSync(outPath, JSON.stringify(data, null, 2));
+    console.log(`  💾 AI çıktısı import-outputs/${path.basename(outPath)} dosyasına kaydedildi`);
 
     const patient = db.createPatient({
       full_name: data.patient.full_name,
@@ -255,7 +222,7 @@ async function processDocx(filePath) {
     // AI output'unu yazdır (debug)
     console.log(`  📋 Parsed data:`, JSON.stringify(parsed, null, 2).substring(0, 300) + '...');
     
-    const count = await saveToDatabase(parsed);
+    const count = await saveToDatabase(parsed, fileName);
 
     return { success: true, fileName, patient: parsed.patient.full_name, count };
   } catch (error) {
@@ -277,27 +244,57 @@ async function main() {
   await db.initializeDatabase();
   console.log('✅ Veritabanı hazır\n');
 
-  // Test dosyası
-  const testFile = '/Users/zaferyildirim/Desktop/Hasta Muayene dosyaları/Havva Didem Çercialioğlu.docx';
-  
-  if (!fs.existsSync(testFile)) {
-    console.error(`❌ Dosya bulunamadı: ${testFile}`);
+  const inputPaths = process.argv.slice(2);
+  if (inputPaths.length === 0) {
+    console.log('Kullanım:');
+    console.log('  node scripts/import-from-docx.js "/path/to/file1.docx" "/path/to/file2.docx"');
+    console.log('  node scripts/import-from-docx.js "/path/to/folder-with-docx"');
+    console.log('\nNot: Klasör verirseniz o klasördeki tüm .docx dosyaları içe aktarılır.');
     process.exit(1);
   }
 
-  console.log(`🧪 Test dosyası: ${path.basename(testFile)}`);
-  console.log('='.repeat(50));
+  const expandToDocxFiles = (inputPath) => {
+    const stat = fs.statSync(inputPath);
+    if (stat.isDirectory()) {
+      return fs
+        .readdirSync(inputPath)
+        .filter(name => name.toLowerCase().endsWith('.docx'))
+        .map(name => path.join(inputPath, name));
+    }
+    return [inputPath];
+  };
 
-  const result = await processDocx(testFile);
+  const docxFiles = inputPaths.flatMap(p => {
+    try {
+      return expandToDocxFiles(p);
+    } catch {
+      return [p];
+    }
+  });
 
-  console.log('='.repeat(50));
-  console.log('📊 SONUÇ\n');
-  if (result.success) {
-    console.log(`✅ Başarılı!`);
-    console.log(`  Hasta: ${result.patient}`);
-    console.log(`  Muayene: ${result.count} kayıt`);
-  } else {
-    console.log(`❌ Hata: ${result.error}`);
+  const results = [];
+  for (const filePath of docxFiles) {
+    if (!fs.existsSync(filePath)) {
+      console.error(`\n❌ Dosya bulunamadı: ${filePath}`);
+      results.push({ success: false, fileName: path.basename(filePath), error: 'File not found' });
+      continue;
+    }
+
+    console.log(`\n🧪 Import dosyası: ${path.basename(filePath)}`);
+    console.log('='.repeat(50));
+    // eslint-disable-next-line no-await-in-loop
+    const result = await processDocx(filePath);
+    results.push(result);
+  }
+
+  console.log('\n' + '='.repeat(50));
+  console.log('📊 TOPLAM SONUÇ\n');
+  for (const r of results) {
+    if (r.success) {
+      console.log(`✅ ${r.fileName} → Hasta: ${r.patient} | Kayıt: ${r.count}`);
+    } else {
+      console.log(`❌ ${r.fileName} → Hata: ${r.error}`);
+    }
   }
   console.log('='.repeat(50));
 }

@@ -137,11 +137,25 @@ app.get('/', requireAuth, (req, res) => {
 // GET /patients - Patients list
 app.get('/patients', requireAuth, (req, res) => {
   const patients = db.getAllPatients();
+  const today = new Date().toISOString().split('T')[0];
+
+  const isIsoDate = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+  const getLastVisitBeforeToday = (records) => {
+    let last = null;
+    for (const record of records) {
+      const d = record?.visit_date;
+      if (!isIsoDate(d)) continue;
+      if (d >= today) continue; // strictly before today
+      if (!last || d > last) last = d;
+    }
+    return last;
+  };
   
   // Add record counts to each patient for display
   patients.forEach(patient => {
     const records = db.getMedicalRecordsByPatientId(patient.id);
     patient.record_count = records.length;
+    patient.last_visit = getLastVisitBeforeToday(records);
   });
   
   res.render('patients/index', { 

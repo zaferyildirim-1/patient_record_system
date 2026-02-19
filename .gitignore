@@ -13,6 +13,10 @@ clinic.db.old
 # CSV Backups (contains patient data)
 backups/
 
+# Import outputs (contains patient data)
+import-output.json
+import-outputs/
+
 # Node modules
 node_modules/
 
@@ -33,3 +37,6 @@ build/
 .idea/
 *.swp
 *.swo
+
+# Local backups
+*.bak

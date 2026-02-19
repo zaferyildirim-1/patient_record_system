@@ -45,6 +45,12 @@ npm --version   # v9+ gereklidir
 cp .env.example .env
 ```
 
+Windows (PowerShell) için:
+
+```powershell
+Copy-Item .env.example .env
+```
+
 ### Step 2: `.env`'yi Düzenle
 
 `.env` dosyasındaki boş alanları doldur:
@@ -167,11 +173,14 @@ node scripts/import-from-csv.js ./imports/your_patients.csv
 DOCX dosyalarından otomatik çıkarma:
 
 ```bash
-# .env'de DOCX_IMPORT_FOLDER ayarladığınızdan emin olun
-export DOCX_IMPORT_FOLDER="/path/to/your/docx/files"
+# Import scriptini çalıştır (dosya veya klasör verebilirsiniz)
+node scripts/import-from-docx.js "/path/to/folder-with-docx"
 
-# Import scriptini çalıştır
-node scripts/batch-import-gpt4o.js /path/to/file1.docx /path/to/file2.docx
+# İsterseniz ilk 10 dosya ile pilot:
+node scripts/import-from-docx.js "/path/to/folder-with-docx" --limit 10
+
+# Kaldığı yerden devam:
+node scripts/import-from-docx.js "/path/to/folder-with-docx" --skip 10 --limit 10
 ```
 
 #### Option 3: Manual Giriş

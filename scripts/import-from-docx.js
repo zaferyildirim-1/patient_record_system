@@ -244,11 +244,32 @@ async function main() {
   await db.initializeDatabase();
   console.log('✅ Veritabanı hazır\n');
 
-  const inputPaths = process.argv.slice(2);
-  if (inputPaths.length === 0) {
+  const argv = process.argv.slice(2);
+  const paths = [];
+  let limit = null;
+  let skip = 0;
+
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === '--limit' && argv[i + 1]) {
+      limit = Number(argv[i + 1]);
+      i++;
+      continue;
+    }
+    if (arg === '--skip' && argv[i + 1]) {
+      skip = Number(argv[i + 1]);
+      i++;
+      continue;
+    }
+    paths.push(arg);
+  }
+
+  if (paths.length === 0) {
     console.log('Kullanım:');
     console.log('  node scripts/import-from-docx.js "/path/to/file1.docx" "/path/to/file2.docx"');
     console.log('  node scripts/import-from-docx.js "/path/to/folder-with-docx"');
+    console.log('  node scripts/import-from-docx.js "/path/to/folder-with-docx" --limit 10');
+    console.log('  node scripts/import-from-docx.js "/path/to/folder-with-docx" --skip 10 --limit 10');
     console.log('\nNot: Klasör verirseniz o klasördeki tüm .docx dosyaları içe aktarılır.');
     process.exit(1);
   }
@@ -256,21 +277,31 @@ async function main() {
   const expandToDocxFiles = (inputPath) => {
     const stat = fs.statSync(inputPath);
     if (stat.isDirectory()) {
+      const collator = new Intl.Collator('tr', { numeric: true, sensitivity: 'base' });
       return fs
         .readdirSync(inputPath)
         .filter(name => name.toLowerCase().endsWith('.docx'))
+        .sort((a, b) => collator.compare(a, b))
         .map(name => path.join(inputPath, name));
     }
     return [inputPath];
   };
 
-  const docxFiles = inputPaths.flatMap(p => {
+  let docxFiles = paths.flatMap(p => {
     try {
       return expandToDocxFiles(p);
     } catch {
       return [p];
     }
   });
+
+  docxFiles = docxFiles.filter(Boolean);
+  if (Number.isFinite(skip) && skip > 0) {
+    docxFiles = docxFiles.slice(skip);
+  }
+  if (Number.isFinite(limit) && limit > 0) {
+    docxFiles = docxFiles.slice(0, limit);
+  }
 
   const results = [];
   for (const filePath of docxFiles) {

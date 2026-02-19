@@ -48,6 +48,72 @@ function computeBackoffMs(attempt) {
   return Math.min(max, expo + jitter);
 }
 
+function isValidIsoDate(value) {
+  if (!value || typeof value !== 'string') return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const dt = new Date(value);
+  return !Number.isNaN(dt.getTime());
+}
+
+function normalizeToIsoDate(value) {
+  if (!value) return null;
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (isValidIsoDate(trimmed)) return trimmed;
+
+  // dd.mm.yyyy / dd/mm/yyyy / dd-mm-yyyy
+  const m1 = trimmed.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})$/);
+  if (m1) {
+    const dd = Number(m1[1]);
+    const mm = Number(m1[2]);
+    let yyyy = Number(m1[3]);
+    if (yyyy < 100) yyyy += 2000;
+    if (dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12 && yyyy >= 1900 && yyyy <= 2100) {
+      const iso = `${String(yyyy).padStart(4, '0')}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+      return isValidIsoDate(iso) ? iso : null;
+    }
+  }
+
+  // yyyy.mm.dd / yyyy/mm/dd / yyyy-mm-dd
+  const m2 = trimmed.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})$/);
+  if (m2) {
+    const yyyy = Number(m2[1]);
+    const mm = Number(m2[2]);
+    const dd = Number(m2[3]);
+    if (dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12 && yyyy >= 1900 && yyyy <= 2100) {
+      const iso = `${String(yyyy).padStart(4, '0')}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+      return isValidIsoDate(iso) ? iso : null;
+    }
+  }
+
+  return null;
+}
+
+function extractIsoDatesFromText(text) {
+  if (!text) return [];
+  const found = new Set();
+
+  const reDmy = /\b(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\b/g;
+  let m;
+  while ((m = reDmy.exec(text)) !== null) {
+    const dd = Number(m[1]);
+    const mm = Number(m[2]);
+    let yyyy = Number(m[3]);
+    if (yyyy < 100) yyyy += 2000;
+    const iso = `${String(yyyy).padStart(4, '0')}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+    if (isValidIsoDate(iso)) found.add(iso);
+  }
+
+  const reIso = /\b(\d{4}-\d{2}-\d{2})\b/g;
+  while ((m = reIso.exec(text)) !== null) {
+    const iso = m[1];
+    if (isValidIsoDate(iso)) found.add(iso);
+  }
+
+  return Array.from(found).sort();
+}
+
 const PROMPT = `Sen deneyimli bir Kadın Hastalıkları ve Doğum uzmanı ve tıbbi dokümantasyon uzmanısın.
 Görevin: Verilen Türkçe hasta muayene metnini yapısal JSON verisine dönüştürmek.
 
@@ -285,6 +351,37 @@ async function processDocx(filePath) {
     console.log(`  📖 ${extractedText.length} karakter okundu`);
 
     const parsed = await parseWithAI(extractedText, fileName);
+
+    // Ensure visit dates are present/valid (DB requires NOT NULL)
+    const patientBirthDate = normalizeToIsoDate(parsed?.patient?.birth_date);
+    const extractedDates = extractIsoDatesFromText(extractedText).filter(d => d !== patientBirthDate);
+    let fallbackIso;
+    try {
+      const st = fs.statSync(filePath);
+      fallbackIso = new Date(st.mtime).toISOString().slice(0, 10);
+    } catch {
+      fallbackIso = new Date().toISOString().slice(0, 10);
+    }
+    const visits = Array.isArray(parsed.visits) ? parsed.visits : [];
+    let dateCursor = 0;
+    for (const visit of visits) {
+      visit.visit_date = normalizeToIsoDate(visit.visit_date);
+      // Some extractions mistakenly set visit_date to birth_date
+      if (visit.visit_date && patientBirthDate && visit.visit_date === patientBirthDate) {
+        visit.visit_date = null;
+      }
+      if (!visit.visit_date) {
+        if (extractedDates.length > 0) {
+          visit.visit_date = extractedDates[Math.min(dateCursor, extractedDates.length - 1)];
+          dateCursor++;
+          visit.complaint = `${visit.complaint || ''}\nTarih metinden yakalandı: ${visit.visit_date}`.trim();
+        } else {
+          visit.visit_date = fallbackIso;
+          visit.complaint = `${visit.complaint || ''}\nTarih bulunamadı; dosya tarihinden alındı: ${fallbackIso}`.trim();
+        }
+      }
+    }
+    parsed.visits = visits;
     
     // AI output'unu yazdır (debug)
     console.log(`  📋 Parsed data:`, JSON.stringify(parsed, null, 2).substring(0, 300) + '...');

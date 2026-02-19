@@ -17,6 +17,9 @@ backups/
 import-output.json
 import-outputs/
 
+# Import errors (contains patient data)
+import-errors/
+
 # Node modules
 node_modules/
 

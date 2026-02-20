@@ -1,7 +1,35 @@
 const { app, BrowserWindow, Menu } = require('electron');
 const path = require('path');
 const isDev = require('electron-is-dev');
+const fs = require('fs');
 let mainWindow;
+
+// Set app data directory FIRST
+const appDataPath = app.getPath('userData');
+if (!fs.existsSync(appDataPath)) {
+  fs.mkdirSync(appDataPath, { recursive: true });
+}
+
+// Set database and sessions paths in environment for use by database.js and server.js
+process.env.DB_PATH = path.join(appDataPath, 'clinic.db');
+process.env.SESSIONS_DIR = path.join(appDataPath, '.sessions');
+
+// Set up environment before server starts
+if (!isDev) {
+  // In production, set environment variables from .env or use defaults
+  const envPath = path.join(__dirname, '.env');
+  if (!fs.existsSync(envPath)) {
+    // Create minimal .env with defaults for production
+    const defaultEnv = `OPENAI_API_KEY=sk-placeholder\nADMIN_USERNAME=admin\nADMIN_PASSWORD=password\nSESSION_SECRET=prod-secret-change-me`;
+    try {
+      fs.writeFileSync(envPath, defaultEnv);
+    } catch (e) {
+      console.log('Could not write .env, using environment defaults');
+    }
+  }
+}
+
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 function createWindow() {
   mainWindow = new BrowserWindow({

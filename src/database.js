@@ -2,7 +2,9 @@ const initSqlJs = require('sql.js');
 const fs = require('fs');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, '../clinic.db');
+// Use DB_PATH from environment (set by main.js in Electron), fallback to current dir
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../clinic.db');
+
 let db = null;
 
 // Initialize database with schema

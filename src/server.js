@@ -1,4 +1,10 @@
-require('dotenv').config();
+// dotenv already configured in main.js for Electron, or configure here for Node
+try {
+  require('dotenv').config();
+} catch (e) {
+  // Already configured
+}
+
 const express = require('express');
 const session = require('express-session');
 const FileStore = require('session-file-store')(session);
@@ -9,6 +15,9 @@ const fs = require('fs');
 const app = express();
 const db = require('./database');
 
+// Determine sessions directory based on environment variable (set by main.js) or development path
+const sessionsDir = process.env.SESSIONS_DIR || path.join(__dirname, '../.sessions');
+
 // Middleware setup
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views'));
@@ -17,9 +26,13 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 // Create sessions directory if it doesn't exist
-const sessionsDir = path.join(__dirname, '../.sessions');
-if (!fs.existsSync(sessionsDir)) {
-  fs.mkdirSync(sessionsDir, { recursive: true });
+try {
+  if (!fs.existsSync(sessionsDir)) {
+    fs.mkdirSync(sessionsDir, { recursive: true });
+  }
+} catch (err) {
+  console.error('Error creating sessions directory:', err.message);
+  // Continue anyway, will fail gracefully if directory is needed
 }
 
 // Session configuration

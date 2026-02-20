@@ -6,8 +6,8 @@
 # Terminal'i temizle
 clear
 
-# Script'in bulunduğu dizine git
-cd "$(dirname "$0")"
+# Proje dizinine git (absolute path)
+cd /Users/zaferyildirim/Desktop/huseyin_sert
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "🏥  Op Dr. Hüseyin Sert - Hasta Kayıt Sistemi"

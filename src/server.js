@@ -463,6 +463,32 @@ app.post('/patients/:id/records/:record_id/update', requireAuth, (req, res) => {
   }
   
   try {
+    // Handle merging of additional conditions/medications/allergies/surgeries with patient's existing data
+    const updatedPatient = { ...patient };
+    
+    if (req.body.additional_chronic_conditions && req.body.additional_chronic_conditions.trim()) {
+      const newConditions = req.body.additional_chronic_conditions.split('\n').map(c => c.trim()).filter(c => c);
+      updatedPatient.chronic_conditions = [...(updatedPatient.chronic_conditions || []), ...newConditions];
+    }
+    
+    if (req.body.additional_medications && req.body.additional_medications.trim()) {
+      const newMeds = req.body.additional_medications.split('\n').map(m => m.trim()).filter(m => m);
+      updatedPatient.medications = [...(updatedPatient.medications || []), ...newMeds];
+    }
+    
+    if (req.body.additional_allergies && req.body.additional_allergies.trim()) {
+      const newAllergies = req.body.additional_allergies.split('\n').map(a => a.trim()).filter(a => a);
+      updatedPatient.allergies = [...(updatedPatient.allergies || []), ...newAllergies];
+    }
+    
+    if (req.body.additional_surgeries && req.body.additional_surgeries.trim()) {
+      const newSurgeries = req.body.additional_surgeries.split('\n').map(s => s.trim()).filter(s => s);
+      updatedPatient.past_surgeries = [...(updatedPatient.past_surgeries || []), ...newSurgeries];
+    }
+    
+    // Update patient with merged data
+    db.updatePatient(patient.id, updatedPatient);
+    
     db.updateMedicalRecord(record.id, {
       visit_type: req.body.visit_type || null,
       visit_week: req.body.visit_week || null,
@@ -472,10 +498,10 @@ app.post('/patients/:id/records/:record_id/update', requireAuth, (req, res) => {
       usg: req.body.usg || null,
       diagnosis: req.body.diagnosis || null,
       outcome: req.body.outcome || null,
-      additional_chronic_conditions: req.body.additional_chronic_conditions || null,
-      additional_medications: req.body.additional_medications || null,
-      additional_allergies: req.body.additional_allergies || null,
-      additional_surgeries: req.body.additional_surgeries || null
+      additional_chronic_conditions: null,
+      additional_medications: null,
+      additional_allergies: null,
+      additional_surgeries: null
     });
     
     res.redirect(`/patients/${patient.id}`);

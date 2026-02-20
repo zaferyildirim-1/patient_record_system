@@ -1,0 +1,105 @@
+const { app, BrowserWindow, Menu } = require('electron');
+const path = require('path');
+const isDev = require('electron-is-dev');
+let mainWindow;
+
+function createWindow() {
+  mainWindow = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true
+    },
+    icon: path.join(__dirname, 'public', 'icon.png')
+  });
+
+  const startUrl = isDev 
+    ? 'http://localhost:3000' 
+    : `file://${path.join(__dirname, 'build', 'index.html')}`;
+
+  mainWindow.loadURL(startUrl);
+
+  if (isDev) {
+    mainWindow.webContents.openDevTools();
+  }
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+}
+
+app.on('ready', () => {
+  // Start Express server
+  require('./src/server');
+  setTimeout(createWindow, 1000);
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+app.on('activate', () => {
+  if (mainWindow === null) {
+    createWindow();
+  }
+});
+
+// Create menu
+const template = [
+  {
+    label: 'File',
+    submenu: [
+      {
+        label: 'Exit',
+        accelerator: 'CmdOrCtrl+Q',
+        click: () => {
+          app.quit();
+        }
+      }
+    ]
+  },
+  {
+    label: 'Edit',
+    submenu: [
+      { role: 'undo' },
+      { role: 'redo' },
+      { type: 'separator' },
+      { role: 'cut' },
+      { role: 'copy' },
+      { role: 'paste' }
+    ]
+  },
+  {
+    label: 'Help',
+    submenu: [
+      {
+        label: 'About',
+        click: () => {
+          // Create about window
+          const aboutWindow = new BrowserWindow({
+            width: 400,
+            height: 300,
+            parent: mainWindow,
+            modal: true
+          });
+          aboutWindow.loadURL(`data:text/html;charset=utf-8,
+            <html>
+              <body style="font-family: Arial; padding: 20px;">
+                <h2>Op Dr. Hüseyin Sert</h2>
+                <p>Hasta Kayıt Sistemi</p>
+                <p>Version 1.0.0</p>
+              </body>
+            </html>
+          `);
+        }
+      }
+    ]
+  }
+];
+
+const menu = Menu.buildFromTemplate(template);
+Menu.setApplicationMenu(menu);

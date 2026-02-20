@@ -43,3 +43,4 @@ build/
 
 # Local backups
 *.bak
+env.txt

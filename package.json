@@ -2,11 +2,17 @@
   "name": "hasta-kayit-sistemi",
   "version": "1.0.0",
   "description": "Basit hasta kayıt uygulaması",
-  "main": "src/server.js",
+  "main": "main.js",
+  "homepage": "./",
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "export:csv": "node scripts/export-csv.js manual"
+    "export:csv": "node scripts/export-csv.js manual",
+    "electron-dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron-build": "npm run build && electron-builder --publish=never",
+    "build-win": "npm run build && electron-builder --win --publish=never",
+    "build-mac": "npm run build && electron-builder --mac --publish=never",
+    "build": "echo 'Production build ready'"
   },
   "keywords": [
     "clinic",
@@ -20,6 +26,7 @@
     "bcrypt": "^6.0.0",
     "dotenv": "^17.2.3",
     "ejs": "^3.1.10",
+    "electron-is-dev": "^3.0.1",
     "express": "^4.19.2",
     "express-session": "^1.18.0",
     "mammoth": "^1.11.0",
@@ -28,6 +35,42 @@
     "sql.js": "^1.11.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "concurrently": "^8.2.2",
+    "electron": "^40.6.0",
+    "electron-builder": "^26.8.1",
+    "nodemon": "^3.0.2",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.huseyin-sert.clinic",
+    "productName": "Op Dr. Hüseyin Sert - Hasta Kayıt Sistemi",
+    "directories": {
+      "buildResources": "public"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "views/**/*",
+      "public/**/*",
+      "node_modules/**/*",
+      ".env*"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    }
   }
 }

@@ -108,19 +108,21 @@
     </section>
 
     <!-- Acil Durum Kişi -->
-    <section class="card">
-      <h3>Acil Durum Kişi</h3>
-      <div class="info-grid">
-        <div>
-          <span class="label">Ad Soyad</span>
-          <span><%= patient.emergency_contact_name || '-' %></span>
+    <% if (patient.emergency_contact_name || patient.emergency_contact_phone) { %>
+      <section class="card">
+        <h3>Acil Durum Kişi</h3>
+        <div class="info-grid">
+          <div>
+            <span class="label">Ad Soyad</span>
+            <span><%= patient.emergency_contact_name || '-' %></span>
+          </div>
+          <div>
+            <span class="label">Telefon</span>
+            <span><%= patient.emergency_contact_phone || '-' %></span>
+          </div>
         </div>
-        <div>
-          <span class="label">Telefon</span>
-          <span><%= patient.emergency_contact_phone || '-' %></span>
-        </div>
-      </div>
-    </section>
+      </section>
+    <% } %>
 
     <section class="card">
       <details class="accordion">

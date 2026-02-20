@@ -3,62 +3,38 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 
-// More reliable isDev check
-const isDev = process.env.NODE_ENV === 'development' || 
-              process.defaultApp || 
-              /[\\/]electron-prebuilt[\\/]/.test(process.execPath) || 
-              /[\\/]electron[\\/]/.test(process.execPath);
+// Simple isDev check
+const isDev = !app.isPackaged;
 
 console.log('Development mode:', isDev);
+console.log('App path:', app.getAppPath());
 
 let mainWindow;
 const DEFAULT_PORT = process.env.PORT || '3000';
 const SERVER_CHECK_PATH = '/login';
 
-// Prevent multiple instances to avoid double-starting the server
-const gotLock = app.requestSingleInstanceLock();
-if (!gotLock) {
-  app.quit();
-} else {
-  app.on('second-instance', () => {
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) {
-        mainWindow.restore();
-      }
-      mainWindow.focus();
-    }
-  });
-}
-
 // Initialize database and sessions paths
 function initializeAppPaths() {
-  // Set app data directory
   const appDataPath = app.getPath('userData');
   if (!fs.existsSync(appDataPath)) {
     fs.mkdirSync(appDataPath, { recursive: true });
   }
-
-  // Set database and sessions paths in environment for use by database.js and server.js
   process.env.DB_PATH = path.join(appDataPath, 'clinic.db');
   process.env.SESSIONS_DIR = path.join(appDataPath, '.sessions');
+  console.log('DB Path:', process.env.DB_PATH);
 }
 
 // Set up environment before server starts
 function initializeEnvironment() {
   const envPath = path.join(__dirname, '.env');
-  if (!isDev) {
-    // In production, set environment variables from .env or use defaults
-    if (!fs.existsSync(envPath)) {
-      // Create minimal .env with defaults for production
-      const defaultEnv = `APP_USER=admin\nAPP_PASSWORD=password\nSESSION_SECRET=prod-secret-change-me\nOPENAI_API_KEY=`;
-      try {
-        fs.writeFileSync(envPath, defaultEnv);
-      } catch (e) {
-        console.log('Could not write .env, using environment defaults');
-      }
+  if (!isDev && !fs.existsSync(envPath)) {
+    const defaultEnv = `APP_USER=admin\nAPP_PASSWORD=password\nSESSION_SECRET=prod-secret-change-me\nOPENAI_API_KEY=`;
+    try {
+      fs.writeFileSync(envPath, defaultEnv);
+    } catch (e) {
+      console.log('Could not write .env');
     }
   }
-
   require('dotenv').config({ path: envPath });
   process.env.PORT = process.env.PORT || DEFAULT_PORT;
 }

@@ -126,7 +126,8 @@ async function boot() {
     console.log('Initializing environment...');
     initializeEnvironment();
     
-    const port = process.env.PORT || DEFAULT_PORT;
+    const port = parseInt(process.env.PORT || DEFAULT_PORT, 10);
+    process.env.PORT = String(port);
     console.log(`Starting backend on port ${port}...`);
     
     await startBackend(port);
@@ -158,7 +159,8 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   if (mainWindow === null) {
-    const port = process.env.PORT || DEFAULT_PORT;
+    const port = parseInt(process.env.PORT || DEFAULT_PORT, 10);
+    process.env.PORT = String(port);
     createWindow(port);
   }
 });
@@ -216,5 +218,5 @@ const template = [
   }
 ];
 
-const menu = Menu.buildFromTemplate(template);
-Menu.setApplicationMenu(menu);
+// const menu = Menu.buildFromTemplate(template); // TEMP DISABLE MENU BUILD
+// Menu.setApplicationMenu(menu); // TEMP DISABLE MENU

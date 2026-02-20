@@ -8,7 +8,7 @@ try {
 const express = require('express');
 const session = require('express-session');
 const FileStore = require('session-file-store')(session);
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const path = require('path');
 const fs = require('fs');
 

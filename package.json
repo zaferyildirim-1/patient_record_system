@@ -1,5 +1,5 @@
 {
-  "name": "hasta-kayit-sistemi",
+  "name": "clinic-app",
   "version": "1.0.0",
   "description": "Basit hasta kayıt uygulaması",
   "main": "main.js",
@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "export:csv": "node scripts/export-csv.js manual"
+    "export:csv": "node scripts/export-csv.js manual",
+    "dist": "electron-builder"
   },
   "keywords": [
     "clinic",
@@ -18,7 +19,7 @@
   "author": "Clinic",
   "license": "MIT",
   "dependencies": {
-    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
     "ejs": "^3.1.10",
     "electron-is-dev": "^3.0.1",
@@ -30,15 +31,18 @@
     "sql.js": "^1.11.0"
   },
   "devDependencies": {
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/cli": "^2.10.0",
     "concurrently": "^8.2.2",
-    "electron": "^28.3.3",
+    "electron": "^40.6.0",
     "electron-builder": "^24.13.3",
+    "electron-rebuild": "^3.2.9",
     "nodemon": "^3.0.2",
     "wait-on": "^7.2.0"
   },
   "build": {
     "appId": "com.huseyin-sert.clinic",
-    "productName": "Op Dr. Hüseyin Sert - Hasta Kayıt Sistemi",
+    "productName": "ClinicApp",
     "directories": {
       "buildResources": "public"
     },
@@ -53,7 +57,7 @@
     ],
     "nodeGypRebuild": false,
     "buildDependenciesFromSource": false,
-    "npmRebuild": false,
+    "npmRebuild": true,
     "asar": false,
     "win": {
       "target": [
@@ -67,10 +71,13 @@
     },
     "mac": {
       "target": [
-        "dmg",
         "zip"
       ],
       "hardenedRuntime": false
-    }
-  }
+    },
+    "asarUnpack": [
+      "**/*.node"
+    ]
+  },
+  "productName": "ClinicApp"
 }

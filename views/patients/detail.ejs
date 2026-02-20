@@ -201,10 +201,8 @@
                 <p><span class="label">SAT (Son Adet Tarihi):</span> <%= formatDate(record.last_menstrual_date) %><% if (record.menstrual_day) { %> <span class="label">&middot; Adetin <%= record.menstrual_day %>. günü</span><% } %></p>
               <% } %>
               <p><span class="label">Şikayet:</span> <%= record.complaint || 'Belirtilmemiş' %></p>
-              <% if (record.usg) { %>
-                <p><span class="label">USG:</span> <%= record.usg %></p>
-              <% } %>
-              <p><span class="label">Teşhis:</span> <%= record.diagnosis || 'Belirtilmemiş' %></p>
+              <p><span class="label">Muayene Bulguları ve Teşhis:</span> <%= record.diagnosis || 'Belirtilmemiş' %></p>
+              <p><span class="label">Ultrason ve Laboratuvar Bulguları:</span> <%= record.usg || 'Belirtilmemiş' %></p>
               <p><span class="label">Sonuç - Tedavi - Reçete:</span> <%= record.outcome || 'Belirtilmemiş' %></p>
             </div>
           <% }); %>

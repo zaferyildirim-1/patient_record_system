@@ -5,11 +5,35 @@ const path = require('path');
 // Use DB_PATH from environment (set by main.js in Electron), fallback to current dir
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../clinic.db');
 
+// Ensure DB file lives in a writable location; copy a bundled seed if present
+function ensureWritableDb() {
+  const targetDir = path.dirname(DB_PATH);
+  if (!fs.existsSync(targetDir)) {
+    fs.mkdirSync(targetDir, { recursive: true });
+  }
+
+  if (fs.existsSync(DB_PATH)) return;
+
+  const bundledCandidates = [
+    path.join(__dirname, '../clinic.db'),
+    path.join(process.resourcesPath || '', 'clinic.db'),
+    path.join(process.resourcesPath || '', 'app', 'clinic.db')
+  ];
+
+  for (const candidate of bundledCandidates) {
+    if (candidate && fs.existsSync(candidate)) {
+      fs.copyFileSync(candidate, DB_PATH);
+      return;
+    }
+  }
+}
+
 let db = null;
 
 // Initialize database with schema
 async function initializeDatabase() {
   const SQL = await initSqlJs();
+  ensureWritableDb();
   
   // Load existing database or create new
   let data = null;

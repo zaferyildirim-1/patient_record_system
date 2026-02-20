@@ -14,6 +14,7 @@ const fs = require('fs');
 
 const app = express();
 const db = require('./database');
+const DEFAULT_PORT = process.env.PORT || 3000;
 
 // Determine sessions directory based on environment variable (set by main.js) or development path
 const sessionsDir = process.env.SESSIONS_DIR || path.join(__dirname, '../.sessions');
@@ -575,9 +576,26 @@ app.use((req, res) => {
   res.status(404).render('not-found', { message: 'Sayfa bulunamadı' });
 });
 
-// Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🏥 Hasta Kayıt Sistemi http://localhost:${PORT} üzerinde çalışıyor`);
-  console.log('📝 Oturum açmak için /login adresine gidin');
-});
+function startServer(port = DEFAULT_PORT) {
+  return new Promise((resolve, reject) => {
+    const server = app.listen(port, () => {
+      console.log(`🏥 Hasta Kayıt Sistemi http://localhost:${port} üzerinde çalışıyor`);
+      console.log('📝 Oturum açmak için /login adresine gidin');
+      resolve({ server, port });
+    });
+
+    server.on('error', (err) => {
+      console.error('❌ Sunucu başlatma hatası:', err);
+      reject(err);
+    });
+  });
+}
+
+if (require.main === module) {
+  startServer().catch((err) => {
+    console.error('❌ Sunucu başlatılamadı:', err?.message || err);
+    process.exit(1);
+  });
+}
+
+module.exports = { app, startServer };

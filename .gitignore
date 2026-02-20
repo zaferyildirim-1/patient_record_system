@@ -7,6 +7,12 @@ clinic.db-journal
 clinic.db.backup*
 clinic.db.old
 
+# Seed database (contains patient data - allow folder, ignore .db files)
+seed/*.db
+seed/*.db-journal
+seed/*.db-wal
+seed/*.db-shm
+
 # Session storage (contains user sessions)
 .sessions/
 

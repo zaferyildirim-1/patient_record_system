@@ -150,7 +150,59 @@ async function boot() {
   }
 }
 
-app.whenReady().then(boot);
+app.whenReady().then(() => {
+  // Single instance lock - prevent multiple app instances
+  const gotTheLock = app.requestSingleInstanceLock();
+  
+  if (!gotTheLock) {
+    console.log('⚠️ Another instance is already running. Exiting.');
+    dialog.showMessageBoxSync({
+      type: 'warning',
+      title: 'Uygulama Zaten Çalışıyor',
+      message: 'Hasta Kayıt Sistemi zaten açık. Lütfen mevcut pencereyi kullanın.',
+      buttons: ['Tamam']
+    });
+    app.quit();
+    return;
+  }
+
+  app.on('second-instance', () => {
+    // Someone tried to run a second instance, focus our window
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+
+  // Create daily backup on startup (max once per day)
+  scheduleDailyBackup();
+  
+  boot();
+});
+
+// Schedule daily backup (checks if today's backup exists)
+function scheduleDailyBackup() {
+  try {
+    const userData = app.getPath('userData');
+    const backupDir = path.join(userData, 'backups');
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+
+    // Check if today's backup already exists
+    const files = fs.readdirSync(backupDir).filter(f => f.includes(today) && f.includes('daily'));
+    
+    if (files.length === 0) {
+      createBackup('daily');
+    } else {
+      console.log('ℹ️ Today\'s backup already exists');
+    }
+  } catch (e) {
+    console.error('❌ Daily backup check error:', e);
+  }
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -232,30 +284,118 @@ function ensureSeedDatabaseExists() {
     const targetExists = fs.existsSync(targetDb);
 
     if (!seedExists) {
-      console.log('Seed DB not found:', seedDb);
+      console.log('ℹ️ Seed DB not found:', seedDb);
+      console.log('   This is normal for development or when no seed DB is provided.');
       return;
     }
 
-    let targetSize = 0;
-    if (targetExists) {
-      targetSize = fs.statSync(targetDb).size;
+    // If target DB doesn't exist, safe to copy seed
+    if (!targetExists) {
+      fs.copyFileSync(seedDb, targetDb);
+      console.log('✅ Seed DB copied to:', targetDb);
+      return;
     }
 
-    const looksEmpty = targetExists && targetSize <= 45000; // ~32KB boş db
+    // Target DB exists - check if it has data
+    const targetSize = fs.statSync(targetDb).size;
+    
+    // If size is suspiciously small, check for actual data
+    if (targetSize < 45000) {
+      // Check if DB is corrupt or truly empty
+      const initSqlJs = require('sql.js');
+      
+      initSqlJs().then(SQL => {
+        try {
+          const data = fs.readFileSync(targetDb);
+          const db = new SQL.Database(data);
+          
+          // Check if patients table has data
+          const result = db.exec("SELECT COUNT(*) as count FROM patients");
+          const patientCount = result[0]?.values[0]?.[0] || 0;
+          
+          db.close();
 
-    if (!targetExists || looksEmpty) {
-      if (targetExists) {
-        const bak = `${targetDb}.bak.${new Date().toISOString().replace(/[:.]/g, '-')}`;
-        fs.copyFileSync(targetDb, bak);
-        console.log('Backed up existing DB =>', bak);
-      }
-
-      fs.copyFileSync(seedDb, targetDb);
-      console.log('Seed DB copied to:', targetDb);
+          if (patientCount === 0) {
+            // Truly empty - backup and replace
+            const bak = `${targetDb}.empty-backup.${Date.now()}.db`;
+            fs.copyFileSync(targetDb, bak);
+            fs.copyFileSync(seedDb, targetDb);
+            console.log('✅ Empty DB detected. Backed up to:', bak);
+            console.log('✅ Seed DB copied to:', targetDb);
+          } else {
+            console.log('✅ DB has', patientCount, 'patients. NOT overwriting.');
+          }
+        } catch (err) {
+          // DB might be corrupt - backup and replace
+          console.warn('⚠️ DB appears corrupt:', err.message);
+          const bak = `${targetDb}.corrupt-backup.${Date.now()}.db`;
+          fs.copyFileSync(targetDb, bak);
+          fs.copyFileSync(seedDb, targetDb);
+          console.log('✅ Corrupt DB backed up to:', bak);
+          console.log('✅ Seed DB copied to:', targetDb);
+        }
+      }).catch(err => {
+        console.error('❌ Could not check DB data:', err.message);
+      });
     } else {
-      console.log('DB already exists, not overwriting:', targetDb);
+      console.log('✅ DB exists with data (', Math.round(targetSize/1024), 'KB). NOT overwriting.');
     }
   } catch (e) {
-    console.error('ensureSeedDatabaseExists error:', e);
+    console.error('❌ ensureSeedDatabaseExists error:', e);
+  }
+}
+
+// Create automatic backup before any risky operation
+function createBackup(reason = 'manual') {
+  try {
+    const userData = app.getPath('userData');
+    const targetDb = path.join(userData, 'clinic.db');
+    const backupDir = path.join(userData, 'backups');
+    
+    if (!fs.existsSync(targetDb)) {
+      console.log('ℹ️ No DB to backup');
+      return null;
+    }
+
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0] + '-' + 
+                      new Date().toTimeString().split(' ')[0].replace(/:/g, '');
+    const backupPath = path.join(backupDir, `clinic-${reason}-${timestamp}.db`);
+    
+    fs.copyFileSync(targetDb, backupPath);
+    console.log('✅ Backup created:', backupPath);
+
+    // Keep only last 20 backups to save space
+    cleanOldBackups(backupDir, 20);
+    
+    return backupPath;
+  } catch (e) {
+    console.error('❌ Backup error:', e);
+    return null;
+  }
+}
+
+// Remove old backups keeping only the most recent
+function cleanOldBackups(backupDir, keepCount = 20) {
+  try {
+    const files = fs.readdirSync(backupDir)
+      .filter(f => f.endsWith('.db'))
+      .map(f => ({
+        name: f,
+        path: path.join(backupDir, f),
+        time: fs.statSync(path.join(backupDir, f)).mtime.getTime()
+      }))
+      .sort((a, b) => b.time - a.time); // newest first
+
+    // Delete old backups
+    files.slice(keepCount).forEach(file => {
+      fs.unlinkSync(file.path);
+      console.log('🗑️ Removed old backup:', file.name);
+    });
+  } catch (e) {
+    console.error('❌ cleanOldBackups error:', e);
   }
 }

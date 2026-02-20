@@ -117,9 +117,31 @@ async function initializeDatabase() {
 // Save database to file
 function saveDatabase() {
   if (db) {
-    const data = db.export();
-    const buffer = Buffer.from(data);
-    fs.writeFileSync(DB_PATH, buffer);
+    try {
+      const data = db.export();
+      const buffer = Buffer.from(data);
+      
+      // Atomic write: write to temp file first, then rename
+      const tempPath = DB_PATH + '.tmp';
+      fs.writeFileSync(tempPath, buffer);
+      
+      // On successful write, replace the original
+      fs.renameSync(tempPath, DB_PATH);
+      
+      // Optional: Log save timestamp for debugging
+      // console.log('✅ DB saved:', new Date().toISOString());
+    } catch (err) {
+      console.error('❌ Database save error:', err);
+      // Clean up temp file if it exists
+      try {
+        const tempPath = DB_PATH + '.tmp';
+        if (fs.existsSync(tempPath)) {
+          fs.unlinkSync(tempPath);
+        }
+      } catch (cleanupErr) {
+        // Ignore cleanup errors
+      }
+    }
   }
 }
 

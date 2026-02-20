@@ -125,6 +125,7 @@ async function boot() {
     
     console.log('Initializing environment...');
     initializeEnvironment();
+    ensureSeedDatabaseExists();
     
     const port = parseInt(process.env.PORT || DEFAULT_PORT, 10);
     process.env.PORT = String(port);
@@ -220,3 +221,41 @@ const template = [
 
 // const menu = Menu.buildFromTemplate(template); // TEMP DISABLE MENU BUILD
 // Menu.setApplicationMenu(menu); // TEMP DISABLE MENU
+
+function ensureSeedDatabaseExists() {
+  try {
+    const userData = app.getPath('userData');
+    const targetDb = path.join(userData, 'clinic.db');
+    const seedDb = path.join(process.resourcesPath || '', 'seed', 'clinic.db');
+
+    const seedExists = fs.existsSync(seedDb);
+    const targetExists = fs.existsSync(targetDb);
+
+    if (!seedExists) {
+      console.log('Seed DB not found:', seedDb);
+      return;
+    }
+
+    let targetSize = 0;
+    if (targetExists) {
+      targetSize = fs.statSync(targetDb).size;
+    }
+
+    const looksEmpty = targetExists && targetSize <= 45000; // ~32KB boş db
+
+    if (!targetExists || looksEmpty) {
+      if (targetExists) {
+        const bak = `${targetDb}.bak.${new Date().toISOString().replace(/[:.]/g, '-')}`;
+        fs.copyFileSync(targetDb, bak);
+        console.log('Backed up existing DB =>', bak);
+      }
+
+      fs.copyFileSync(seedDb, targetDb);
+      console.log('Seed DB copied to:', targetDb);
+    } else {
+      console.log('DB already exists, not overwriting:', targetDb);
+    }
+  } catch (e) {
+    console.error('ensureSeedDatabaseExists error:', e);
+  }
+}

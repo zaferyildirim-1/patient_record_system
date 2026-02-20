@@ -77,6 +77,12 @@
     },
     "asarUnpack": [
       "**/*.node"
+    ],
+    "extraResources": [
+      {
+        "from": "seed/clinic.db",
+        "to": "seed/clinic.db"
+      }
     ]
   },
   "productName": "ClinicApp"

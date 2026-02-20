@@ -1,5 +1,0 @@
-# Ignore all CSV backup files
-*.csv
-
-# But keep this file to maintain directory structure
-!.gitignore

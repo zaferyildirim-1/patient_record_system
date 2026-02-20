@@ -56,6 +56,9 @@
       "node_modules/**/*",
       ".env*"
     ],
+    "nodeGypRebuild": false,
+    "buildDependenciesFromSource": false,
+    "npmRebuild": false,
     "win": {
       "target": [
         "nsis",

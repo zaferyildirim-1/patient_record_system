@@ -59,6 +59,7 @@
     "nodeGypRebuild": false,
     "buildDependenciesFromSource": false,
     "npmRebuild": false,
+    "asar": false,
     "win": {
       "target": [
         "nsis",
@@ -73,7 +74,8 @@
       "target": [
         "dmg",
         "zip"
-      ]
+      ],
+      "hardenedRuntime": false
     }
   }
 }

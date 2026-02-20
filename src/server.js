@@ -494,6 +494,33 @@ app.post('/patients/:id/records/:record_id/update', requireAuth, (req, res) => {
   }
 });
 
+// POST /patients/:id/records/:record_id/delete - Delete medical record
+app.post('/patients/:id/records/:record_id/delete', requireAuth, (req, res) => {
+  const patient = db.getPatientById(req.params.id);
+  if (!patient) {
+    return res.status(404).render('not-found', { message: 'Hasta bulunamadı' });
+  }
+  
+  try {
+    db.deleteMedicalRecord(req.params.record_id);
+    res.redirect(`/patients/${patient.id}`);
+  } catch (err) {
+    console.error('Delete record error:', err);
+    res.status(500).render('not-found', { message: 'Muayene kaydı silinirken hata oluştu' });
+  }
+});
+
+// POST /patients/:id/delete - Delete patient
+app.post('/patients/:id/delete', requireAuth, (req, res) => {
+  try {
+    db.deletePatient(req.params.id);
+    res.redirect('/patients');
+  } catch (err) {
+    console.error('Delete patient error:', err);
+    res.status(500).render('not-found', { message: 'Hasta silinirken hata oluştu' });
+  }
+});
+
 // GET /logout - Logout
 app.get('/logout', (req, res) => {
   req.session.destroy((err) => {

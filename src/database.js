@@ -342,6 +342,18 @@ function updateMedicalRecord(id, recordData) {
   return getMedicalRecordById(id);
 }
 
+// MEDICAL_RECORDS - Delete
+function deleteMedicalRecord(id) {
+  db.run('DELETE FROM medical_records WHERE id = ?', [id]);
+  saveDatabase();
+}
+
+// PATIENTS - Delete
+function deletePatient(id) {
+  db.run('DELETE FROM patients WHERE id = ?', [id]);
+  saveDatabase();
+}
+
 // MEDICAL_RECORDS - Get all by patient
 function getMedicalRecordsByPatientId(patientId) {
   const result = db.exec(
@@ -373,12 +385,14 @@ module.exports = {
   getPatientById,
   updatePatient,
   getAllPatients,
+  deletePatient,
   
   // Medical Records
   createMedicalRecord,
   getMedicalRecordById,
   updateMedicalRecord,
   getMedicalRecordsByPatientId,
+  deleteMedicalRecord,
   
   // Getters
   getDb: () => db

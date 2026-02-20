@@ -134,9 +134,9 @@ app.get('/', requireAuth, (req, res) => {
   });
 });
 
-// GET /patients - Patients list
+// GET /patients - Patients list with search/filter
 app.get('/patients', requireAuth, (req, res) => {
-  const patients = db.getAllPatients();
+  let patients = db.getAllPatients();
   const today = new Date().toISOString().split('T')[0];
 
   const isIsoDate = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -151,6 +151,24 @@ app.get('/patients', requireAuth, (req, res) => {
     return last;
   };
   
+  // Apply filters from query parameters
+  const filters = {
+    patient_code: req.query.patient_code?.trim() || '',
+    full_name: req.query.full_name?.trim() || ''
+  };
+  
+  const hasFilters = filters.patient_code || filters.full_name;
+  
+  if (hasFilters) {
+    patients = patients.filter(patient => {
+      const codeMatch = !filters.patient_code || 
+        patient.patient_code.toLowerCase().includes(filters.patient_code.toLowerCase());
+      const nameMatch = !filters.full_name || 
+        patient.full_name.toLowerCase().includes(filters.full_name.toLowerCase());
+      return codeMatch && nameMatch;
+    });
+  }
+  
   // Add record counts to each patient for display
   patients.forEach(patient => {
     const records = db.getMedicalRecordsByPatientId(patient.id);
@@ -161,8 +179,8 @@ app.get('/patients', requireAuth, (req, res) => {
   res.render('patients/index', { 
     patients,
     username: req.session.username,
-    filters: {},
-    hasFilters: false,
+    filters,
+    hasFilters,
     formatDate: (date) => {
       if (!date) return '-';
       const d = new Date(date);

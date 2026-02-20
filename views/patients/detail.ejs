@@ -52,6 +52,76 @@
       <p class="meta">Son güncelleme: <%= formatDate(patient.updated_at ? patient.updated_at.split(' ')[0] : null) %></p>
     </section>
 
+    <!-- Sağlık Bilgileri -->
+    <section class="card">
+      <h2>📋 Sağlık Bilgileri</h2>
+      <div class="info-grid">
+        <div>
+          <span class="label">Kronik Hastalıklar</span>
+          <div style="background: #f9f9f9; padding: 8px; border-radius: 3px; min-height: 30px;">
+            <% if (patient.chronic_conditions && patient.chronic_conditions.length > 0) { %>
+              <% patient.chronic_conditions.forEach(condition => { %>
+                <div>• <%= condition %></div>
+              <% }); %>
+            <% } else { %>
+              <em style="color: #999;">Kayıt yok</em>
+            <% } %>
+          </div>
+        </div>
+        <div>
+          <span class="label">İlaçlar</span>
+          <div style="background: #f9f9f9; padding: 8px; border-radius: 3px; min-height: 30px;">
+            <% if (patient.medications && patient.medications.length > 0) { %>
+              <% patient.medications.forEach(med => { %>
+                <div>• <%= med %></div>
+              <% }); %>
+            <% } else { %>
+              <em style="color: #999;">Kayıt yok</em>
+            <% } %>
+          </div>
+        </div>
+        <div>
+          <span class="label">Alerji / İlaç İntoleransı</span>
+          <div style="background: #f9f9f9; padding: 8px; border-radius: 3px; min-height: 30px;">
+            <% if (patient.allergies && patient.allergies.length > 0) { %>
+              <% patient.allergies.forEach(allergy => { %>
+                <div>• <%= allergy %></div>
+              <% }); %>
+            <% } else { %>
+              <em style="color: #999;">Kayıt yok</em>
+            <% } %>
+          </div>
+        </div>
+        <div>
+          <span class="label">Geçmiş Operasyonlar</span>
+          <div style="background: #f9f9f9; padding: 8px; border-radius: 3px; min-height: 30px;">
+            <% if (patient.past_surgeries && patient.past_surgeries.length > 0) { %>
+              <% patient.past_surgeries.forEach(surgery => { %>
+                <div>• <%= surgery %></div>
+              <% }); %>
+            <% } else { %>
+              <em style="color: #999;">Kayıt yok</em>
+            <% } %>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Acil Durum Kişi -->
+    <section class="card">
+      <h2>🚨 Acil Durum Kişi</h2>
+      <div class="info-grid">
+        <div>
+          <span class="label">Ad Soyad</span>
+          <span><%= patient.emergency_contact_name || '-' %></span>
+        </div>
+        <div>
+          <span class="label">Telefon</span>
+          <span><%= patient.emergency_contact_phone || '-' %></span>
+        </div>
+      </div>
+    </section>
+
     <section class="card">
       <details class="accordion">
         <summary class="accordion-summary">
